@@ -9,7 +9,7 @@ const api=window.anywhere;
 let state,page='bots',selected='',search='',searchOpen=true,grouped=false,avatars=[],busy=false,recordingSlot=null,inboxBot='',inboxFilterController,inboxAvatarObserver,menuReading=false,toastTimer,viewKey='',gridKey='';
 let settingsTab='general',copying=false,confirmState=null,copyOpener=null,moreMenu=null,botDetail=null,avatarEditor=null;
 try{grouped=localStorage.getItem('gba.grouped')==='1';}catch{}
-const chinese=()=>state?.host?.locale?.startsWith('zh')??navigator.language.startsWith('zh');
+const chinese=()=>{const ui=state?.host?.uiLocale;if(ui==='zh'||ui==='en')return ui==='zh';return String(state?.host?.locale??navigator.language??'').toLowerCase().startsWith('zh');};
 const t=(cn,en)=>chinese()?cn:en;
 const SHAPE_NAMES={
  blob:['团子','Blob'],pebble:['卵石','Pebble'],bean:['豆子','Bean'],egg:['蛋','Egg'],squircle:['方圆','Squircle'],tablet:['药片','Tablet'],capsule:['胶囊','Capsule'],cylinder:['圆柱','Cylinder'],hex:['六边形','Hex'],gem:['宝石','Gem'],crystal:['水晶','Crystal'],wedge:['楔形','Wedge'],shield:['盾牌','Shield'],dome:['穹顶','Dome'],arch:['拱门','Arch'],cloud:['云','Cloud'],teardrop:['水滴','Teardrop'],leaf:['叶子','Leaf'],square:['方形','Square'],sparkle:['闪光','Sparkle'],clover:['四叶草','Clover'],flower:['花','Flower'],heart:['心','Heart'],house:['房子','House'],star:['星','Star'],pumpkin:['南瓜','Pumpkin']
@@ -58,6 +58,7 @@ const errorMessages={
  EXPLORER_SYNC_FAILED:['资源管理器右键菜单没有同步。','The Explorer menu did not sync.'],
  EXPLORER_MENU_UNAVAILABLE:['这个系统没有资源管理器右键菜单。','This system has no Explorer menu.'],
  WATCH_DIR_INVALID:['这个文件夹打不开。','That folder could not be opened.'],
+ LANGUAGE_INVALID:['这个语言选项不能用。','That language choice cannot be used.'],
  DEEPLINK_IGNORED:['这个链接没有执行。','This link did not run.']
 };
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,5000);}
@@ -146,7 +147,7 @@ function viewSignature(){
  const running=(state.runtime?.statuses??[]).filter(row=>row.isRunning).map(row=>row.agentId).sort();
  const pins=state.runtime?.pinnedAgentIds??[];
  const sections=(state.runtime?.sections??[]).map(section=>[section.id,section.name,section.agentIds,section.collapsed]);
- return JSON.stringify({theme:state.theme,material:state.host?.material??'',platform:state.host?.platform??'',locale:state.host?.locale??'',preview:!!state.host?.preview,issue:state.host?.issue??'',connected:!!state.connected,account:state.account?.name??'',page,selected,search,searchOpen,grouped,busy,recording:recordingSlot??'',inboxBot,menuReading,settingsTab,openAtLogin:!!state.host?.openAtLogin,touchBarPinned:!!state.host?.touchBarPinned,shortcuts:state.shortcuts??null,prefs:state.composerPrefs??null,cli:state.host?.cli??null,main:state.runtime?.mainAgentId??'',running,pins,sections,bots,menu:page==='settings'?state.host?.menu??null:null,inbox:page==='inbox'?state.inbox??null:null});
+ return JSON.stringify({theme:state.theme,language:state.language??'system',material:state.host?.material??'',platform:state.host?.platform??'',locale:state.host?.locale??'',uiLocale:state.host?.uiLocale??'',preview:!!state.host?.preview,issue:state.host?.issue??'',connected:!!state.connected,account:state.account?.name??'',page,selected,search,searchOpen,grouped,busy,recording:recordingSlot??'',inboxBot,menuReading,settingsTab,openAtLogin:!!state.host?.openAtLogin,touchBarPinned:!!state.host?.touchBarPinned,shortcuts:state.shortcuts??null,prefs:state.composerPrefs??null,cli:state.host?.cli??null,main:state.runtime?.mainAgentId??'',running,pins,sections,bots,menu:page==='settings'?state.host?.menu??null:null,inbox:page==='inbox'?state.inbox??null:null});
 }
 function botRowKey(bot,running){
  const recipient=recipientOf(bot.id);
@@ -654,7 +655,16 @@ function renderSettings(content){
  for(const [value,label] of [['system',t('系统','System')],['light',t('白','Light')],['dark',t('黑','Dark')]]){
   const choice=el('button',state.theme===value?'selected':'',label);choice.type='button';choice.addEventListener('click',()=>run(()=>api.theme(value)));themes.append(choice);
  }
- themeRow.append(themes);appearance.append(themeRow);if(settingsTab==='general')panel.append(account,appearance,sourceDefaultsPanel(),whatsAppWatchPanel());
+ themeRow.append(themes);appearance.append(themeRow);
+ const languageRow=el('div','group-row'),languageCopy=el('div','group-copy');
+ languageCopy.append(el('div','group-label',t('语言','Language')),el('div','group-help',t('界面、托盘、通知、确认和「文件」菜单马上切换。编辑和窗口菜单仍跟随系统。macOS 分享菜单标题在下次同步后更换；微信会缓存菜单，需要重新打开微信。','The interface, tray, notifications, confirmations, and the File menu switch immediately. Edit and Window stay with the system. macOS share-menu titles change on the next sync; WeChat caches that menu, so reopen WeChat.')));
+ const languages=el('div','segment');languages.setAttribute('aria-label',t('语言','Language'));
+ const currentLanguage=state.language==='zh'||state.language==='en'?state.language:'system';
+ for(const [value,label] of [['system',t('跟随系统','Follow system')],['zh','中文'],['en','English']]){
+  const choice=el('button',currentLanguage===value?'selected':'',label);choice.type='button';choice.addEventListener('click',()=>run(()=>api.setLanguage(value)));languages.append(choice);
+ }
+ languageRow.append(languageCopy,languages);appearance.append(languageRow);
+ if(settingsTab==='general')panel.append(account,appearance,sourceDefaultsPanel(),whatsAppWatchPanel());
  const keys=el('section','group');
  keys.append(shortcutRow('compose',t('通用快捷键','General shortcut'),t('打开上次用过的 Bot。点按键，再按下组合。Esc 取消。','Opens the Bot you used last. Click the key, then press a combination. Esc cancels.')));
  keys.append(shortcutRow('open',t('在 Grok Bot 中打开','Open in Grok Bot'),t('打开上次选中的 Bot。链接是 grokbot://app/v1/agent?id= 加上这个 Bot 的编号。','Opens the Bot you selected last. The link is grokbot://app/v1/agent?id= plus that Bot id.')));

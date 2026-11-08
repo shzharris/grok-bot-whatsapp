@@ -23,6 +23,7 @@ import {grokBotAgentUrl} from '../grok-link.mjs';
 import {disableCli,enableCli,skillBundleDir,writeCliCredential} from './cli-bridge.mjs';
 import {applyExplorerRegistry,applyLoginItem,composerBounds,createExplorerBatch,createExplorerSync,explorerLogLine,explorerRegistryOps,explorerRejectNotice,floatingComposerTraits,loginItemStartup,openedAsLoginItem,parseExplorerForward,resolveExplorerForward,shareResultNotice,shouldApplyLoginItem,touchBarChoice,touchBarPinPayload,trayCommand,trayMenuModel,trimExplorerLog,windowCloseAction} from '../shell/actions.mjs';
 import {coalBallAppPng,coalBallIcon,coalBallPng,trayIconImages} from '../shell/coal-ball.mjs';
+import {resolveUiLocale} from '../shell/locale.mjs';
 import {acceptWindowControl,editCommand,mainWindowOptions,maximizedContentInset} from '../shell/window-chrome.mjs';
 import {composeLink,deeplinkNotice,parseDeeplink,shortcutSourceAllowed} from '../shell/deeplink.mjs';
 import {listedBots} from '../renderer/group-avatar.mjs';
@@ -44,11 +45,15 @@ let cliStatus={enabled:false,command:'',skillsPath:'',claudeLinked:false,credent
 const pendingSharedComposers=new Set();let openingSharedComposer=false,shortcutsSuppressed=false;
 const pendingLinks=[];let deeplinkReady=false,deeplinkChain=Promise.resolve();
 const registeredShortcuts=new Map();
-const zh=app.getLocale?.().startsWith('zh');
-const notify=(event,data)=>{const payload={event,data};for(const target of [window,floatWindow,avatarWindow,pickerWindow])if(target&&!target.isDestroyed())target.webContents.send('anywhere:event',payload);};
+const osLocale=()=>app.getLocale?.()??'';
+const uiLocale=()=>resolveUiLocale(latestState?.language,osLocale());
+const uiZh=()=>uiLocale()==='zh';
+const uiText=(cn,en)=>uiZh()?cn:en;
+let appliedUiLocale='';
+const notify=(event,data)=>{const payload={event,data};for(const target of [window,floatWindow,avatarWindow,pickerWindow,sharePickerWindow])if(target&&!target.isDestroyed())target.webContents.send('anywhere:event',payload);};
 const cliPublic=()=>({enabled:!!cliStatus.enabled,command:cliStatus.command??'',skillsPath:cliStatus.skillsPath??'',claudeLinked:!!cliStatus.claudeLinked,credential:!!cliStatus.credential,error:cliStatus.error??''});
-const publicState=()=>({...latestState,activeBotId,composerPrefs,host:{platform:process.platform,locale:app.getLocale(),material:windowMaterial,companion:!!companion?.ready,preview,issue:hostIssue,openAtLogin,explorerMenu,touchBarPinned,menu:shareMenu?.status??{available:false,needsUpdate:true,registered:0},cli:cliPublic()}});
-const update=()=>{notify('state',publicState());refreshTouchBar();};
+const publicState=()=>({...latestState,activeBotId,composerPrefs,host:{platform:process.platform,locale:osLocale(),uiLocale:uiLocale(),material:windowMaterial,companion:!!companion?.ready,preview,issue:hostIssue,openAtLogin,explorerMenu,touchBarPinned,menu:shareMenu?.status??{available:false,needsUpdate:true,registered:0},cli:cliPublic()}});
+const update=()=>{applyChromeLanguage();notify('state',publicState());refreshTouchBar();};
 const issue=code=>{if(!code||code==='ACCOUNT_BUSY')return;hostIssue=code;update();};
 const errorCode=error=>/^[A-Z][A-Z0-9_]{1,70}$/.test(error?.message??'')?error.message:'OPERATION_FAILED';
 
@@ -133,8 +138,40 @@ function ensureTray(){
   if(!image||image.isEmpty())return;
   tray=new Tray(image);
   tray.setToolTip('Grok Bot Anywhere');
-  tray.setContextMenu(Menu.buildFromTemplate(trayMenuModel(app.getLocale?.()??'').map(item=>({label:item.label,click:()=>runTray(trayCommand(item.id))}))));
+  refreshTrayMenu();
   if(process.platform==='win32')tray.on('click',()=>showMainWindow());
+}
+function refreshTrayMenu(){
+  if(!tray)return;
+  tray.setContextMenu(Menu.buildFromTemplate(trayMenuModel(uiLocale()).map(item=>({label:item.label,click:()=>runTray(trayCommand(item.id))}))));
+}
+function applyApplicationMenu(){
+  if(process.platform==='win32'){Menu.setApplicationMenu(null);return;}
+  const menu=Menu.buildFromTemplate([
+    ...(process.platform==='darwin'?[{label:app.name,submenu:[{role:'about'},{type:'separator'},{role:'quit'}]}]:[]),
+    {label:uiText('文件','File'),submenu:[{label:uiText('显示主窗口','Show window'),click:()=>showMainWindow()},{label:uiText('关闭窗口','Close window'),accelerator:'CmdOrCtrl+W',click:()=>{if(window&&!window.isDestroyed())window.close();}},...(process.platform!=='darwin'?[{role:'quit'}]:[])]},
+    {role:'editMenu'},{role:'windowMenu'}]);
+  Menu.setApplicationMenu(menu);
+}
+function syncShareMenuLocale(){
+  if(!shareMenu||!menuReconciler)return;
+  const locale=uiLocale();
+  shareMenu.locale=locale;
+  const built=shareMenu.installed?.locale;
+  const known=built==='zh'||built==='en';
+  if(known?built===locale:locale===resolveUiLocale('system',osLocale()))return;
+  void menuReconciler.flush({force:true}).catch(error=>{
+    if(['MENU_SUPERSEDED','MENU_UPDATE_BUSY','ACCOUNT_BUSY'].includes(error?.message))return;
+    issue('MENU_UPDATE_FAILED');
+  });
+}
+function applyChromeLanguage(){
+  const locale=uiLocale();
+  if(locale===appliedUiLocale)return;
+  appliedUiLocale=locale;
+  refreshTrayMenu();
+  applyApplicationMenu();
+  syncShareMenuLocale();
 }
 function runTray(action){
   if(action==='show-main'){showMainWindow();return;}
@@ -191,7 +228,7 @@ async function deliverExplorer(forward){
   const verdict=await resolveExplorerForward({read:()=>({botId:forward.botId,bots:latestState.bots,recipients:latestState.recipients,connected:latestState.connected===true,hasAccount:!!latestState.account,settled:explorerSettled})});
   if(!verdict.accept){
     await logExplorerReject(forward.argv??[],verdict.botId||forward.botId,verdict.reason);
-    if(!preview&&Notification.isSupported())systemNotification(explorerRejectNotice(app.getLocale?.()??'',verdict.reason)).show();
+    if(!preview&&Notification.isSupported())systemNotification(explorerRejectNotice(uiLocale(),verdict.reason)).show();
     return;
   }
   const appArg=app.isPackaged?'':app.getAppPath();
@@ -208,7 +245,7 @@ function deeplinkIssue(code){
   notify('toast',safe);
   const visible=!!window&&!window.isDestroyed()&&window.isVisible();
   if(visible||preview||!Notification.isSupported())return;
-  systemNotification({title:'Grok Bot Anywhere',body:deeplinkNotice(app.getLocale?.()??'',safe)}).show();
+  systemNotification({title:'Grok Bot Anywhere',body:deeplinkNotice(uiLocale(),safe)}).show();
 }
 function acceptDeeplink(raw){
   const text=String(raw??'').trim().replace(/^"(.*)"$/,'$1');
@@ -267,7 +304,7 @@ function sharePickerPayload(){
       running:(latestState.runtime?.statuses??[]).some(row=>row.agentId===entry.botId&&row.isRunning)
     };
   });
-  return {bots,fileCount:sharePending.files.length};
+  return {bots,fileCount:sharePending.files.length,uiLocale:uiLocale()};
 }
 async function confirmShare(botId){
   if(!sharePending)return {ok:false};
@@ -817,7 +854,7 @@ async function dispatch(method,p){
       latestState=state;update();return publicState();
     }
     case 'chooseWhatsAppWatchDir':{
-      const picked=await dialog.showOpenDialog(ownerWindow(),{properties:['openDirectory']});
+      const picked=await dialog.showOpenDialog(ownerWindow(),{title:uiText('选择文件夹','Choose folder'),buttonLabel:uiText('选择','Choose'),properties:['openDirectory']});
       if(picked.canceled||!picked.filePaths?.[0])return {canceled:true};
       const state=await rpc.call('setWhatsAppWatch',{dir:picked.filePaths[0]});
       latestState=state;update();return publicState();
@@ -843,6 +880,7 @@ async function dispatch(method,p){
     }
     case 'menuOrder':return readShareOrder();
     case 'theme':nativeTheme.themeSource=p.theme;return rpc.call('theme',{theme:p.theme});
+    case 'setLanguage':{const state=await rpc.call('setLanguage',{language:p.language});latestState=state;update();return publicState();}
     case 'setShortcut':return rpc.call('setShortcut',{slot:p.slot,accelerator:p.accelerator});
     case 'setCli':return setCliEnabled(!!p.enabled);
     case 'setOpenAtLogin':{
@@ -916,11 +954,11 @@ async function dispatch(method,p){
     }
     case 'pickFiles':{
       suspendFloatDismiss=true;
-      try{const picked=await dialog.showOpenDialog(ownerWindow(),{properties:['openFile','multiSelections']});return picked.canceled?[]:picked.filePaths;}
+      try{const picked=await dialog.showOpenDialog(ownerWindow(),{title:uiText('选择文件','Choose files'),buttonLabel:uiText('打开','Open'),properties:['openFile','multiSelections']});return picked.canceled?[]:picked.filePaths;}
       finally{setTimeout(()=>{suspendFloatDismiss=false;},400);}
     }
     case 'chooseFiles':{
-      const result=await dialog.showOpenDialog(window,{properties:['openFile','multiSelections']});
+      const result=await dialog.showOpenDialog(window,{title:uiText('选择文件','Choose files'),buttonLabel:uiText('打开','Open'),properties:['openFile','multiSelections']});
       return result.canceled?null:intake(p.botId,result.filePaths);
     }
     case 'dropFiles':return intake(p.botId,p.files);
@@ -939,7 +977,7 @@ function serviceEvent(message){
     try{const url=new URL(message.data.url);if(url.origin!=='https://cursor.com'||url.pathname!=='/loginDeepControl')throw new Error();void shell.openExternal(url.href).catch(()=>issue('BROWSER_OPEN_FAILED'));}catch{issue('LOGIN_URL_INVALID');}
   }
   if(message.event==='auth.expired'){hostIssue='LOGIN_REQUIRED';void vault.remove().catch(()=>{});void forgetCliCredential().then(()=>update()).catch(()=>update());}
-  if(message.event==='reply'&&!preview&&Notification.isSupported())systemNotification({title:message.data.name||'Grok Bot',body:zh?'收到新回复':'New reply'}).show();
+  if(message.event==='reply'&&!preview&&Notification.isSupported())systemNotification({title:message.data.name||'Grok Bot',body:uiText('收到新回复','New reply')}).show();
   if(message.event==='share.preparing'){
     const data=message.data;
     if(data?.mode==='compose'&&!preview&&!composerBar&&!composerVisible()){
@@ -953,18 +991,18 @@ function serviceEvent(message){
       if(pendingFloat?.preparing?.id&&message.data.batchId&&pendingFloat.preparing.id===message.data.batchId)hideFloat({clearAttachments:true});
       notify('navigate',{page:'inbox'});
       const botName=(latestState.bots??[]).find(bot=>bot.id===message.data.botId)?.name??'';
-      const notice=shareResultNotice({status:message.data.status,botName,locale:app.getLocale()});
+      const notice=shareResultNotice({status:message.data.status,botName,locale:uiLocale()});
       if(notice&&!preview&&Notification.isSupported())systemNotification(notice).show();
     }else void presentShare(message.data.id);
   }
   if(message.event==='send.error'&&floatWindow&&!floatWindow.isDestroyed())floatWindow.webContents.send('anywhere:event',{event:'send-error',data:message.data});
   if(message.event==='whatsapp.imported'&&!preview&&Notification.isSupported()){
     const name=message.data?.chatName||message.data?.fileName||'';
-    systemNotification({title:'Grok Bot Anywhere',body:zh?`已导入 WhatsApp 聊天${name?`「${name}」`:''}`:`Imported WhatsApp chat${name?`: ${name}`:''}`}).show();
+    systemNotification({title:'Grok Bot Anywhere',body:uiText(`已导入 WhatsApp 聊天${name?`「${name}」`:''}`,`Imported WhatsApp chat${name?`: ${name}`:''}`)}).show();
   }
   if(message.event==='share.error'){
     issue('SHARE_IMPORT_FAILED');
-    if(!preview&&Notification.isSupported())systemNotification({title:'Grok Bot Anywhere',body:zh?'这次转发没有导入，内容还在本地。请到发送记录查看。':'This forward could not be imported. The content stays local; check Send history.'}).show();
+    if(!preview&&Notification.isSupported())systemNotification({title:'Grok Bot Anywhere',body:uiText('这次转发没有导入，内容还在本地。请到发送记录查看。','This forward could not be imported. The content stays local; check Send history.')}).show();
   }
 }
 function ownerWindow(){const owner=ipcSender?BrowserWindow.fromWebContents(ipcSender):null;return owner&&!owner.isDestroyed()?owner:window;}
@@ -1039,7 +1077,7 @@ if(!app.requestSingleInstanceLock({argv:process.argv})&&!smoke){app.quit();}else
   if(!preview&&process.platform==='darwin'){
     const template=menuHostTemplate({packaged:app.isPackaged,resourcesPath:process.resourcesPath,devRoot:join(here,'../..')});
     if(existsSync(join(template,'Contents/MacOS/GrokBotMenuHost'))){
-      shareMenu=new ShareMenu({root:join(app.getPath('userData'),'ShareInbox'),template,applicationsRoot:join(homedir(),'Applications'),applicationPath:sharingApplicationPath({packaged:app.isPackaged,appPath:app.getAppPath(),execPath:process.execPath}),locale:app.getLocale(),onChange:()=>{if(!shareMenu.status.needsUpdate&&hostIssue==='MENU_UPDATE_FAILED')hostIssue=null;update();}});
+      shareMenu=new ShareMenu({root:join(app.getPath('userData'),'ShareInbox'),template,applicationsRoot:join(homedir(),'Applications'),applicationPath:sharingApplicationPath({packaged:app.isPackaged,appPath:app.getAppPath(),execPath:process.execPath}),locale:resolveUiLocale('system',osLocale()),onChange:()=>{if(!shareMenu.status.needsUpdate&&hostIssue==='MENU_UPDATE_FAILED')hostIssue=null;update();}});
       await shareMenu.initialize();
       await shareMenu.elect().catch(()=>{});
       menuReconciler=new MenuReconciler({
@@ -1063,7 +1101,8 @@ if(!app.requestSingleInstanceLock({argv:process.argv})&&!smoke){app.quit();}else
   loadShellPrefs();
   const loginStartup=loginItemStartup({known:loginItemKnown,enabled:openAtLogin});
   if(loginStartup&&shouldApplyLoginItem({preview,packaged:app.isPackaged})){try{applyLoginItem(loginStartup.openAtLogin,app);}catch{/* Keep the saved preference when the system rejects it. */}}
-  latestState=await rpc.call('initialize',{root:join(app.getPath('userData'),'inbox'),shareRoot:shareMenu?.root,preview,locale:app.getLocale(),downloadsDir:app.getPath('downloads')});
+  latestState=await rpc.call('initialize',{root:join(app.getPath('userData'),'inbox'),shareRoot:shareMenu?.root,preview,locale:osLocale(),downloadsDir:app.getPath('downloads')});
+  applyChromeLanguage();
   applyShortcuts(latestState.shortcuts);
   if(menuReconciler)menuReconciler.request(latestState);
   void refreshFinderIfStale();
@@ -1085,11 +1124,7 @@ if(!app.requestSingleInstanceLock({argv:process.argv})&&!smoke){app.quit();}else
     else window.close();
     return {value:{ok:true}};
   });
-  if(process.platform==='win32')Menu.setApplicationMenu(null);
-  else{const menu=Menu.buildFromTemplate([
-    ...(process.platform==='darwin'?[{label:app.name,submenu:[{role:'about'},{type:'separator'},{role:'quit'}]}]:[]),
-    {label:zh?'文件':'File',submenu:[{label:zh?'显示主窗口':'Show window',click:()=>showMainWindow()},{label:zh?'关闭窗口':'Close window',accelerator:'CmdOrCtrl+W',click:()=>{if(window&&!window.isDestroyed())window.close();}},...(process.platform!=='darwin'?[{role:'quit'}]:[])]},
-    {role:'editMenu'},{role:'windowMenu'}]);Menu.setApplicationMenu(menu);}
+  applyApplicationMenu();
   await createWindow();
   ensureTray();
   applyAppIcon();

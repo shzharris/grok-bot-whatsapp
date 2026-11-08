@@ -33,7 +33,7 @@
 
 | 方法 | 作用 |
 | --- | --- |
-| `snapshot` | 全量状态：账号、Bot、recipients、inbox、theme、shortcuts、runtime、watchErrors、sourceDefaults |
+| `snapshot` | 全量状态：账号、Bot、recipients、inbox、theme、language、shortcuts、runtime、watchErrors、sourceDefaults |
 | `login` / `desktopLogin` / `connect` / `logout` | 浏览器 PKCE、本机登录、连接、退出 |
 | `refresh` | 刷新名单/运行时 |
 | `duplicateBot` | 把同一 Bot 加为另一个接收单位（同名分组场景） |
@@ -43,7 +43,7 @@
 | `receive` | 新建 receipt（入口统一走这里） |
 | `submit` / `submitAsync` / `retry` / `resolve` / `composer` / `dismissComposer` | 补字发送、后台发送并立即返回 receipt id、重试失败项、核对解锁、取草稿、关闭草稿并清理附件 |
 | `resume` | 启动时恢复未完成状态 |
-| `theme` / `setShortcut` | 偏好 |
+| `theme` / `setLanguage` / `setShortcut` | 偏好。`language` 只接受 `system`、`zh`、`en` |
 | `watch` | 订阅某 Bot/session 回复 |
 | `shutdown` | 停 drain、关 watcher、关库 |
 
@@ -64,6 +64,7 @@ preferences(key, value JSON, PRIMARY KEY(key))
 - receipt 里的附件复制到 `inbox/files/<receiptId>/`，数据库只存路径/名称/字节数。
 - `sourceDefaults:<accountId>` 存在 preferences 里：`{share:{botId,prefix}, whatsapp:{botId,prefix}}`。前缀属于来源，写进正文；Bot 自己的 direct 前缀仍包在外面。旧数据里的 `wechat` 槽在读取时并进 `share`，已经写过的 `share` 不会被盖掉。指定通用默认 Bot 时同时打开 `share` 和 `drop`。
 - `whatsappWatch` 存在 preferences 里：`{enabled, dir, seen}`。默认关闭。`dir` 为空时用主进程传来的下载文件夹。打开或更换文件夹时，把当时已经在文件夹里的导出记入 `seen`，不投递。之后新出现、大小和 mtime 稳定、并且解析器确认是 WhatsApp 导出的文件，交给 WhatsApp 默认 Bot，走和分享相同的 `receive`。不移动、不删除原文件。`seen` 用路径、大小和 mtime 去重。
+- `language` 存在 preferences 里，取值 `system`、`zh` 或 `en`。缺省或认不出的值都当作 `system`，旧数据库不用迁移。主进程再用系统 locale 解析成 `zh` 或 `en`。
 
 ## 投递状态机
 

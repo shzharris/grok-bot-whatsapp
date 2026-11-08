@@ -15,7 +15,7 @@
 - 原生：`native/macos/`（Swift），仅 macOS。
 - 协议：`packages/client-protocol/`，非官方、实验性。
 - 文档：`docs/` 是唯一事实来源；`docs/history/` 只作背景。
-- 基线（2026-11-08）：desktop 190 passed（`npm run test:desktop`）。client-protocol 61、avatar 1、Swift 8 为 2026-11-05 / 2026-11-01 基线，本次未重跑。Windows 实机（2026-11-01）：desktop 128 passed + 2 skipped（POSIX-only 断言）、client-protocol 60 passed。
+- 基线（2026-11-08）：desktop 193 passed（`npm run test:desktop`）。client-protocol 61、avatar 1、Swift 8 为 2026-11-05 / 2026-11-01 基线，本次未重跑。Windows 实机（2026-11-01）：desktop 128 passed + 2 skipped（POSIX-only 断言）、client-protocol 60 passed。
 - 根命令：`npm run test:all`、`npm run docs:check`、`npm run smoke`。
 
 ## 命令
@@ -48,7 +48,7 @@ desktop/                  Electron 主产品
   src/renderer/           UI（无 Node、无凭据）
   src/share/              macOS 分享槽位与注册
   src/shell/              跨平台纯函数
-  test/                   190 tests
+  test/                   193 tests
 native/macos/             Swift 伴侣 + Bloub 头像
 packages/client-protocol  非官方 SDK/CLI
 docs/                     Wiki（Current / Unverified / Historical）

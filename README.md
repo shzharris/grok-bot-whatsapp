@@ -39,6 +39,12 @@
 > [!IMPORTANT]
 > 这是一个**非官方**客户端。它使用你自己的 Grok Bot 账号，与 xAI、WhatsApp 都没有合作、授权或背书。协议来自对本地客户端的观察，可能随上游更新失效。本应用不读取 WhatsApp 的本地数据库，也不登录 WhatsApp；只处理你主动导出或分享出来的文件。
 
+## English
+
+grok-bot-whatsapp sends a WhatsApp chat export to your own Grok Bot. It reads only files you export or share. It does not open WhatsApp's database or sign in to WhatsApp. This is an unofficial client, not affiliated with xAI or WhatsApp.
+
+The interface follows the system language: Chinese when the locale is `zh-*`, otherwise English. **Settings → General → Language** can override that with Follow system, 中文, or English. The window, composer, tray, notifications, confirmations, and the Windows share picker switch immediately. macOS share-menu titles change on the next menu sync; WeChat caches that menu, so reopen WeChat. Edit and Window on the macOS menu bar stay with the system language.
+
 ## 它解决什么问题
 
 聊天记录常常停在 WhatsApp 里：一次导出、一个 `_chat.txt`，或一个带着图片的 zip。这个应用把这些导出接到你指定的 Bot 上，并留下一条本地收件记录。系统分享、拖放和悬浮输入框也可以把内容送进来。它不是另一个聊天客户端，只做投递入口和收件箱。
@@ -131,6 +137,10 @@ npm run package:win    # 未签名 zip
 macOS 上还可以用设备端中文语音输入；拖入文件时只登记路径，发送时才复制和上传。发送后输入框收起为带头像、进度条和状态的小条，关闭小条不会中止发送；附件超过 50 MB 会先确认。
 
 <p align="center"><img src="docs/assets/screenshots/composer.png" alt="悬浮输入框：附件、正文与发送按钮" width="560"></p>
+
+### 界面语言
+
+默认跟随系统：语言是 `zh-*` 时用中文，否则用英文。在 **设置 → 常规 → 语言** 可以选择「跟随系统」「中文」或 English。主窗口、输入框、托盘、通知和确认马上切换。macOS 分享菜单标题在下次同步后更换；微信会缓存菜单，需要重新打开。
 
 ### 分享菜单（macOS）
 

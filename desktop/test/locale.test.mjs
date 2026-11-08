@@ -1,0 +1,71 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {InboxStore} from '../src/service/store.mjs';
+import {AccountSession} from '../src/service/session.mjs';
+import {normalizeLanguage,resolveUiLocale,shareSlotTitle} from '../src/shell/locale.mjs';
+
+test('the interface follows zh-* and otherwise uses English', () => {
+  assert.equal(normalizeLanguage(undefined), 'system');
+  assert.equal(normalizeLanguage(null), 'system');
+  assert.equal(normalizeLanguage('fr'), 'system');
+  assert.equal(normalizeLanguage('zh'), 'zh');
+  assert.equal(resolveUiLocale('system', 'zh-CN'), 'zh');
+  assert.equal(resolveUiLocale('system', 'zh-Hant'), 'zh');
+  assert.equal(resolveUiLocale('system', 'en-US'), 'en');
+  assert.equal(resolveUiLocale('system', ''), 'en');
+  assert.equal(resolveUiLocale('zh', 'en-US'), 'zh');
+  assert.equal(resolveUiLocale('en', 'zh-CN'), 'en');
+  assert.equal(resolveUiLocale('nope', 'zh-CN'), 'zh');
+  assert.equal(shareSlotTitle('News', 'zh'), '发给 News');
+  assert.equal(shareSlotTitle('News', 'en'), 'Send to News');
+  assert.equal(shareSlotTitle('', 'zh'), 'Grok Bot');
+});
+
+test('a saved language override survives and an unknown value stays on the system', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'gba-locale-'));
+  const store = new InboxStore(join(root, 'inbox'));
+  const session = new AccountSession({store, sdk: {GrokBotClient: class {}}});
+  t.after(() => {session.close(); store.close(); return rm(root, {recursive: true, force: true});});
+  assert.equal(session.snapshot().language, 'system');
+  assert.equal(session.setLanguage('en').language, 'en');
+  assert.equal(store.preference('language'), 'en');
+  store.preference('language', 'fr');
+  assert.equal(session.language(), 'system');
+  assert.throws(() => session.setLanguage('fr'), /LANGUAGE_INVALID/);
+  assert.equal(store.preference('language'), 'fr');
+  assert.equal(session.setLanguage('zh').language, 'zh');
+  assert.equal(session.setLanguage('system').language, 'system');
+});
+
+test('settings, menus, notifications, and the Windows picker share one language switch', async () => {
+  const renderer = await readFile(new URL('../src/renderer/app.mjs', import.meta.url), 'utf8');
+  const composer = await readFile(new URL('../src/renderer/composer.mjs', import.meta.url), 'utf8');
+  const picker = await readFile(new URL('../src/renderer/share-picker.mjs', import.meta.url), 'utf8');
+  const main = await readFile(new URL('../src/main/main.mjs', import.meta.url), 'utf8');
+  const menu = await readFile(new URL('../src/main/share-menu.mjs', import.meta.url), 'utf8');
+  const preload = await readFile(new URL('../src/preload.cjs', import.meta.url), 'utf8');
+  assert.match(renderer, /跟随系统/);
+  assert.match(renderer, /setLanguage/);
+  assert.match(renderer, /uiLocale/);
+  assert.match(renderer, /WhatsApp 和通用来源可以各自指定默认 Bot 和一段前缀/);
+  assert.match(renderer, /WhatsApp and the general source can each have a default Bot and a prefix/);
+  assert.match(renderer, /WhatsApp 和通用来源才会把内容交给这个 Bot/);
+  assert.match(renderer, /WhatsApp and the general source deliver content to this Bot/);
+  assert.match(composer, /uiLocale/);
+  assert.match(composer, /附件较大，继续发送？/);
+  assert.match(composer, /Large attachments/);
+  assert.match(picker, /分享给/);
+  assert.match(picker, /Share with/);
+  assert.match(picker, /uiLocale/);
+  assert.match(main, /setLanguage/);
+  assert.match(main, /uiLocale\(\)/);
+  assert.match(main, /选择文件夹/);
+  assert.match(main, /Choose folder/);
+  assert.match(main, /已导入 WhatsApp 聊天/);
+  assert.match(main, /Imported WhatsApp chat/);
+  assert.match(menu, /shareSlotTitle/);
+  assert.match(preload, /setLanguage/);
+});
