@@ -12,7 +12,7 @@ const draft={botId:'',text:'',paths:[],names:[],receiptId:null,remote:[],prepari
 let preparingTimer;
 const $=id=>document.getElementById(id);
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;};
-const chinese=()=>state?.host?.locale?.startsWith('zh')??navigator.language.startsWith('zh');
+const chinese=()=>{const ui=state?.host?.uiLocale;if(ui==='zh'||ui==='en')return ui==='zh';return String(state?.host?.locale??navigator.language??'').toLowerCase().startsWith('zh');};
 const t=(cn,en)=>chinese()?cn:en;
 const prefs=()=>state?.composerPrefs??{afterSend:'hide',dismissOnOutside:true};
 const ordered=()=>{

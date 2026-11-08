@@ -12,6 +12,21 @@ let bots=[];
 let index=0;
 let busy=false;
 let reduced=false;
+let uiLocale='en';
+const t=(cn,en)=>String(uiLocale).toLowerCase().startsWith('zh')?cn:en;
+function useLocale(value){
+  if(value!=='zh'&&value!=='en')return;
+  uiLocale=value;
+}
+function applyCopy(){
+  document.documentElement.lang=t('zh-CN','en');
+  document.title=t('分享给','Share with');
+  document.getElementById('title').textContent=document.title;
+  document.getElementById('list').setAttribute('aria-label',t('Bot 列表','Bots'));
+  cancel.textContent=t('取消','Cancel');
+  send.textContent=t('发送','Send');
+  if(!bots.length&&empty.hidden)empty.textContent=t('没有 Bot 开启分享。','No Bot is receiving shares.');
+}
 
 function row(bot,position){
   const element=document.createElement('div');
@@ -61,6 +76,7 @@ function paintEngine(bot,avatar){
   }
 }
 function paint(){
+  applyCopy();
   list.replaceChildren();
   for(const handle of avatars.splice(0))handle?.dispose?.();
   bots.forEach((bot,position)=>{
@@ -82,11 +98,12 @@ function paint(){
   send.disabled=!bots.length||busy;
   if(bots.length){
     const bot=bots[index];
-    hint.textContent=reduced?'':'↑↓ 选择 · Enter 发送 · Esc 取消';
+    hint.textContent=reduced?'':t('↑↓ 选择 · Enter 发送 · Esc 取消','↑↓ select · Enter sends · Esc cancels');
     for(const element of list.children)element.setAttribute('aria-selected',String(Number(element.dataset.index)===index));
     bot && void bot;
   }else{
-    hint.textContent='Esc 关闭';
+    hint.textContent=t('Esc 关闭','Esc closes');
+    empty.textContent=t('没有 Bot 开启分享。','No Bot is receiving shares.');
   }
   requestAnimationFrame(fitHeight);
 }
@@ -135,6 +152,7 @@ function fitHeight(){
 async function load(){
   try{
     const data=await api.sharePickerData();
+    useLocale(data?.uiLocale);
     bots=data?.bots??[];
     index=0;
     paint();
@@ -145,8 +163,13 @@ async function load(){
     bots=[];
     paint();
     empty.hidden=false;
-    empty.textContent=`没有读到可以分享的 Bot（${error?.message??'未知错误'}）。`;
+    empty.textContent=t(`没有读到可以分享的 Bot（${error?.message??'未知错误'}）。`,`Could not load Bots to share (${error?.message??'unknown error'}).`);
   }
 }
 
+api.onChange?.(message=>{
+  if(message.event!=='state')return;
+  const next=message.data?.host?.uiLocale;
+  if(next!==uiLocale&&(next==='zh'||next==='en')){uiLocale=next;paint();}
+});
 void load();

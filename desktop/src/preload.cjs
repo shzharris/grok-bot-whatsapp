@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('anywhere',{
   setWhatsAppWatch:patch=>call('setWhatsAppWatch',patch??{}),
   chooseWhatsAppWatchDir:()=>call('chooseWhatsAppWatchDir'),
   theme:theme=>call('theme',{theme}),
+  setLanguage:language=>call('setLanguage',{language}),
   compose:botId=>call('compose',{botId}),copyComposeLink:botId=>call('copyComposeLink',{botId}),openBot:botId=>call('openBot',{botId}),openReceipt:id=>call('openReceipt',{id}),sendReceipt:id=>call('sendReceipt',{id}),
   sendDraft:(botId,text,files,receiptId,remoteKeep)=>call('sendDraft',{botId,text,files,receiptId,remoteKeep}),
   retry:id=>call('retry',{id}),

@@ -8,6 +8,7 @@ import {menuHostName,menuEntries,menuPlan,shareConfiguration,slotIdentifier,lega
 import {plist,extensionInfo,destinationInfo} from '../share/plist.mjs';
 import {registerSlots} from '../share/registration.mjs';
 import {iconResourceName} from '../share/icon-resource.mjs';
+import {shareSlotTitle} from '../shell/locale.mjs';
 
 const execute=promisify(execFile);
 const LS='/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
@@ -114,7 +115,9 @@ export class ShareMenu {
    if(exists)previousHost=this.host;
    let previousBuild=this.installed?.build??2;
    if(exists){try{const {stdout}=await run('/usr/bin/plutil',['-extract','CFBundleVersion','raw','-o','-',join(this.host,'Contents/Info.plist')]);previousBuild=Math.max(previousBuild,Number(stdout.trim())||0);}catch{}}
-   const rebuild=force||plan.rebuild||!exists||this.installed?.layoutVersion!==4||this.installed?.templateHash!==this.templateHash||this.installed?.applicationPath!==this.applicationPath;
+   const menuLocale=String(this.locale??'').toLowerCase().startsWith('zh')?'zh':'en';
+   const recordedLocale=this.installed?.locale==='zh'||this.installed?.locale==='en'?this.installed.locale:'';
+   const rebuild=force||plan.rebuild||!exists||this.installed?.layoutVersion!==4||this.installed?.templateHash!==this.templateHash||this.installed?.applicationPath!==this.applicationPath||(recordedLocale!==''&&recordedLocale!==menuLocale);
    const build=rebuild?previousBuild+1:previousBuild;
    if(rebuild){
     const entries=plan.entries.filter(entry=>plan.enabledSlots.includes(entry.slot)).map(entry=>({...entry,generation:entry.generation??1,extensionId:extensionIdentifier(entry.slot,entry.generation??1)}));
@@ -130,10 +133,10 @@ export class ShareMenu {
      await cp(join(this.template,'Contents/PlugIns/GrokBotShare1.appex'),extension,{recursive:true});
      const executable=`GrokBotShare${slot}`;
      await rename(join(extension,'Contents/MacOS/GrokBotShare'),join(extension,'Contents/MacOS',executable));
-     const cn=entry?`发给 ${entry.botName}`:'Grok Bot',en=entry?`Send to ${entry.botName}`:'Grok Bot',name=this.locale.startsWith('zh')?cn:en;
+     const name=shareSlotTitle(entry?.botName,this.locale);
      let iconFile='AppIcon.icns';
      await writeFile(join(resources,'binding.json'),JSON.stringify(entry?{version:1,slot,accountId:entry.accountId,botId:entry.botId}:{version:1,slot}));
-     for(const [language,label] of [['zh-Hans',cn],['en',en]]){await mkdir(join(resources,`${language}.lproj`),{recursive:true});await writeFile(join(resources,`${language}.lproj/InfoPlist.strings`),`"CFBundleDisplayName" = ${JSON.stringify(label)};\n`);}
+     for(const language of ['zh-Hans','en']){await mkdir(join(resources,`${language}.lproj`),{recursive:true});await writeFile(join(resources,`${language}.lproj/InfoPlist.strings`),`"CFBundleDisplayName" = ${JSON.stringify(name)};\n`);}
      if(entry){
       const data=icons.find(icon=>icon.botId===entry.botId)?.png;
       if(typeof data!=='string'||!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(data)||data.length>2*1024*1024)throw new Error('MENU_AVATAR_MISSING');
@@ -159,7 +162,7 @@ export class ShareMenu {
    }
    check();registrationTouched=true;check();
    const registered=await registerSlots(this.host,plan.enabledSlots,run,undefined,{isCurrent,identifier:slot=>pluginIdentifier({layoutVersion:rebuild?4:this.installed?.layoutVersion,entries:plan.entries},slot)});check();
-   this.installed={layoutVersion:rebuild?4:(previous?.layoutVersion??4),hostPath:this.host,entries:plan.entries.map(({bot,...entry})=>entry),enabledSlots:plan.enabledSlots,templateHash:this.templateHash,applicationPath:this.applicationPath,build};
+   this.installed={layoutVersion:rebuild?4:(previous?.layoutVersion??4),hostPath:this.host,entries:plan.entries.map(({bot,...entry})=>entry),enabledSlots:plan.enabledSlots,templateHash:this.templateHash,applicationPath:this.applicationPath,build,locale:rebuild?menuLocale:this.installed?.locale};
    this.electedSlots=await this.readElections(this.installed);check();
    await atomicJSON(join(this.root,'menu-state.json'),this.installed);
    this.status={available:true,registered,enabled:plan.enabledSlots.length,needsUpdate:registered!==plan.enabledSlots.length,busy:false};this.onChange();

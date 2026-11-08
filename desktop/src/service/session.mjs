@@ -8,6 +8,7 @@ import {inspectWhatsAppIntake,prependInstruction} from './whatsapp-export.mjs';
 import {WhatsAppFolderWatch} from './whatsapp-watch.mjs';
 import {readSidebarSettings} from './runtime-settings.mjs';
 import {normalizeAccelerator,normalizeShortcutMap} from '../shortcuts.mjs';
+import {normalizeLanguage} from '../shell/locale.mjs';
 
 const AVATAR_SHAPES=new Set(SHAPES);
 const AVATAR_COLORS=new Set(COLORS.map(({id})=>id));
@@ -53,7 +54,7 @@ export class AccountSession {
     const accountId=this.account?.id;
     return {account:this.account,connected:!!this.client,accountBusy:this.transition,bots:this.bots,recipients:accountId?this.bots.map(bot=>this.store.recipient(accountId,bot.id)):[],
       inbox:accountId?this.store.list(accountId).map(({files,...item})=>({...item,files:files.map(({name,bytes})=>({name,bytes}))})):[],
-      theme:this.store.preference('theme')??'system',shortcuts:this.shortcutMap(),sourceDefaults:this.sourceDefaults(),whatsappWatch:this.whatsappWatch.view(),runtime:this.runtime,watchErrors:this.watchErrors,backgroundSending:!!this.delivery?.inflight.size,
+      theme:this.store.preference('theme')??'system',language:this.language(),shortcuts:this.shortcutMap(),sourceDefaults:this.sourceDefaults(),whatsappWatch:this.whatsappWatch.view(),runtime:this.runtime,watchErrors:this.watchErrors,backgroundSending:!!this.delivery?.inflight.size,
       capabilities:{runtime:typeof this.client?.getRuntimeSettings==='function',statuses:typeof this.client?.listStatuses==='function'||typeof this.client?.listAgentStatuses==='function'}};
   }
   emit(){if(!this.closed)this.onEvent({event:'state',data:this.snapshot()});}
@@ -286,6 +287,8 @@ export class AccountSession {
     if(error?.httpStatus===401||error?.httpStatus===403){this.client=null;this.credentials=null;this.stopWatches();this.onEvent({event:'auth.expired',data:{}});this.emit();}
   }
   setTheme(theme){if(!['system','light','dark'].includes(theme))throw new Error('THEME_INVALID');this.store.preference('theme',theme);this.emit();return this.snapshot();}
+  language(){return normalizeLanguage(this.store.preference('language'));}
+  setLanguage(language){if(language!=='system'&&language!=='zh'&&language!=='en')throw new Error('LANGUAGE_INVALID');this.store.preference('language',language);this.emit();return this.snapshot();}
   shortcutMap(){return normalizeShortcutMap(this.store.preference('shortcuts'));}
   setShortcut(slot,accelerator){
     const current=this.shortcutMap();
