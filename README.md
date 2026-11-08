@@ -21,10 +21,6 @@
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT"></a>
 </p>
 
-<p>
-<a href="https://chat.whatsapp.com/D6GAA73V0dGE9qd9gvh2n7?mode=gi_t"><img src="https://img.shields.io/badge/加入_WhatsApp_交流群-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="加入 WhatsApp 交流群"></a>
-</p>
-
 <p><sub>macOS 主路径已实机验证 · WhatsApp 真实分享菜单、下载文件夹和文件夹选择器未实机验证 · Windows 部分实机验证（开发模式） · Linux 暂不支持</sub></p>
 
 </div>
@@ -57,10 +53,6 @@ The interface follows the system language: Chinese when the locale is `zh-*`, ot
 - 使用 macOS，或愿意在 Windows 上帮忙实机验证。
 
 **不适合：** 需要 Linux 桌面支持、需要读取 WhatsApp 本机数据库，或只接受官方公开 API 的场景。
-
-## 加入 WhatsApp 交流群
-
-使用和反馈可以进这个群：[加入 WhatsApp 交流群](https://chat.whatsapp.com/D6GAA73V0dGE9qd9gvh2n7?mode=gi_t)。
 
 ## WhatsApp 怎么用
 
