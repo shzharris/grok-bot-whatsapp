@@ -1,6 +1,6 @@
 # Grok Bot Anywhere
 
-> 非官方 Grok Bot 桌面客户端：把微信转发、快捷指令、Explorer 右键、拖放和全局悬浮输入框接给指定 Bot。macOS 已验证，Windows 已实现未实机验证，Linux 未支持。
+> 非官方 Grok Bot 桌面客户端：把 WhatsApp 导出、系统分享、Explorer 右键、拖放和全局悬浮输入框接给指定 Bot。macOS 主路径已验证；WhatsApp 真实分享菜单未实机验证。Windows 部分实机验证，Linux 未支持。
 
 ## 入口
 

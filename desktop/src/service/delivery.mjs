@@ -14,16 +14,22 @@ export class Delivery {
     this.active=new Set();
     this.inflight=new Set();
   }
-  async receive({accountId,bot,source,text='',title='',files=[],fileNames,manual=false,sourceId,policy}) {
+  async receive({accountId,bot,source,text='',title='',files=[],fileNames,manual=false,sourceId,policy,originSource,sourceTag}) {
     if(!accountId||!bot?.id||typeof text!=='string'||text.length>2_000_000||typeof title!=='string'||!Array.isArray(files)||files.length>100||files.some(p=>typeof p!=='string'||!isAbsolute(p))||!SOURCES.includes(source))throw new Error('RECEIPT_INVALID');
+    if(originSource!==undefined&&!SOURCES.includes(originSource))throw new Error('RECEIPT_INVALID');
+    if(sourceTag!==undefined&&sourceTag!=='WhatsApp')throw new Error('RECEIPT_INVALID');
     const recipient=this.store.recipient(accountId,bot.id);
-    if(!manual&&(!recipient.enabled||!recipient.sources[source]))throw new Error('SOURCE_DISABLED');
+    // A share slot is chosen before the file is classified. WhatsApp exports that
+    // arrive through the generic share sheet stay allowed when that source is on.
+    const originAllowed=!!originSource&&recipient.sources[originSource]===true;
+    if(!manual&&(!recipient.enabled||!(recipient.sources[source]||originAllowed)))throw new Error('SOURCE_DISABLED');
     if(fileNames&&(!Array.isArray(fileNames)||fileNames.length!==files.length||fileNames.some(n=>typeof n!=='string'||!n||/[\\/]/.test(n))))throw new Error('ATTACHMENT_INVALID');
     if(policy&&(!['compose','direct'].includes(policy.mode)||typeof policy.prefix!=='string'||!Number.isSafeInteger(policy.createdAt)))throw new Error('RECEIPT_INVALID');
     if(!text.trim()&&!files.length)throw new Error('RECEIPT_EMPTY');
     const id=randomUUID(),directory=join(this.store.root,'files',id),createdAt=policy?.createdAt??this.now();
     const item={id,accountId,botId:bot.id,botName:bot.name,sessionId:bot.sessionId??'',source,title,text,createdAt,mode:manual?'compose':recipient.mode,prefix:manual?'':recipient.prefix,files:[],status:'needs-input',phase:'ready',messageId:randomUUID(),replies:[],error:null};
     if(sourceId)item.sourceId=sourceId;
+    if(sourceTag)item.sourceTag=sourceTag;
     if(policy){item.mode=policy.mode;item.prefix=policy.prefix;if(policy.sessionId!==undefined)item.sessionId=policy.sessionId;}
     try {
       await mkdir(directory,{recursive:true,mode:0o700});

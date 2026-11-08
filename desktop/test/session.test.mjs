@@ -227,7 +227,7 @@ if(loaded) {
   assert.equal(kept.enabled,false);
   assert.equal(kept.mode,'direct');
   assert.equal(kept.prefix,'keep');
-  assert.equal(kept.sources.wechat,true);
+  assert.equal(kept.sources.wechat,false);
   assert.equal(kept.sources.share,true);
   assert.equal(kept.sources.shortcuts,true);
   assert.equal(kept.sources.drop,false);
@@ -243,6 +243,55 @@ if(loaded) {
   assert.throws(()=>session.disableAllReceive(),/RECIPIENT_INVALID/);
   assert.equal(store.recipient('account-a',bot.id).enabled,true);
   assert.equal(store.recipient('account-a',hidden.id).enabled,true);
+ });
+ test('each source keeps its own default Bot and prefix',async t=>{
+  const {session,store}=await setup(t);
+  assert.deepEqual(session.sourceDefaults(),{share:{botId:'',prefix:''},whatsapp:{botId:'',prefix:''}});
+  store.preference('sourceDefaults:account-a',{wechat:{botId:bot.id,prefix:'旧前缀'},whatsapp:{botId:'',prefix:''}});
+  assert.equal(session.sourceDefaults().share.botId,bot.id);
+  assert.equal(session.sourceDefaults().share.prefix,'旧前缀');
+  assert.equal(session.sourceDefaults().wechat,undefined);
+  store.preference('sourceDefaults:account-a',{wechat:{botId:bot.id,prefix:'旧前缀'},share:{botId:'',prefix:'保留'},whatsapp:{botId:'',prefix:''}});
+  assert.equal(session.sourceDefaults().share.prefix,'保留');
+  assert.equal(session.sourceDefaults().share.botId,'');
+  session.setSourceDefaults({whatsapp:{botId:bot.id,prefix:'整理要点、痛点和可做的选题'}});
+  assert.equal(session.sourceDefaults().whatsapp.prefix,'整理要点、痛点和可做的选题');
+  assert.equal(session.sourceDefaults().share.prefix,'保留');
+  const recipient=store.recipient('account-a',bot.id);
+  assert.equal(recipient.enabled,true);
+  assert.equal(recipient.sources.whatsapp,true);
+  assert.equal(recipient.sources.share,false);
+  session.setSourceDefaults({share:{botId:bot.id,prefix:'先看背景'}});
+  const general=store.recipient('account-a',bot.id);
+  assert.equal(general.sources.share,true);
+  assert.equal(general.sources.drop,true);
+  assert.throws(()=>session.setSourceDefaults({share:{botId:'missing'}}),/BOT_NOT_FOUND/);
+  assert.throws(()=>session.setSourceDefaults({share:{prefix:1}}),/SOURCE_DEFAULTS_INVALID/);
+ });
+ test('a non-WhatsApp share stored as wechat is delivered on the general source',async t=>{
+  const {session,store}=await setup(t);
+  store.preference('sourceDefaults:account-a',{wechat:{botId:bot.id,prefix:'先看背景'}});
+  session.configure(bot.id,{enabled:true,sources:{wechat:true,share:false,drop:false,whatsapp:false,shortcuts:false}});
+  const item=await session.receive({botId:bot.id,source:'wechat',text:'转发的正文'});
+  assert.equal(item.source,'share');
+  assert.equal(item.sourceTag,undefined);
+  assert.match(item.text,/先看背景/);
+  assert.match(item.text,/转发的正文/);
+ });
+ test('a dropped WhatsApp export is tagged and carries the source prefix',async t=>{
+  const {session,root}=await setup(t);
+  session.setSourceDefaults({whatsapp:{botId:bot.id,prefix:'整理要点、痛点和可做的选题'}});
+  const file=join(root,'WhatsApp Chat - 家庭群.txt');
+  await writeFile(file,'[2024年1月15日 下午3:45:12] 小明: 大家好\n[2024年1月15日 下午4:01:02] 小红: 收到\n');
+  const item=await session.receive({botId:bot.id,source:'drop',files:[file]});
+  assert.equal(item.source,'whatsapp');
+  assert.equal(item.sourceTag,'WhatsApp');
+  assert.equal(item.title,'家庭群');
+  assert.match(item.text,/\[WhatsApp\]/);
+  assert.match(item.text,/整理要点、痛点和可做的选题/);
+  assert.match(item.text,/参与者：小明、小红/);
+  assert.match(item.text,/2024-01-15 15:45/);
+  assert.equal(item.files.length,1);
  });
  test('duplicate is unavailable until the sdk provides it',async t=>{
   const {session}=await setup(t);

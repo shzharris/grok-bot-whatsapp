@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 const loaded=await Promise.allSettled([import('../src/share/model.mjs'),import('../src/service/share-inbox.mjs')]);
 test('share menu and local importer are implemented',()=>assert.ok(loaded.every(r=>r.status==='fulfilled')));
 const model=loaded[0].value,ShareInbox=loaded[1].value?.ShareInbox;
-const state={account:{id:'a'},bots:Array.from({length:14},(_,i)=>({id:`bot-${i}`,name:`Bot ${i}`,avatarShape:'cloud',avatarColor:'brown'})),recipients:Array.from({length:14},(_,i)=>({botId:`bot-${i}`,enabled:true,order:i,mode:'compose',prefix:'',sources:{wechat:true}}))};
+const state={account:{id:'a'},bots:Array.from({length:14},(_,i)=>({id:`bot-${i}`,name:`Bot ${i}`,avatarShape:'cloud',avatarColor:'brown'})),recipients:Array.from({length:14},(_,i)=>({botId:`bot-${i}`,enabled:true,order:i,mode:'compose',prefix:'',sources:{share:true}}))};
 if(model&&ShareInbox){
  test('a same-named single bot is not a second share row for the group',()=>{
   const input=structuredClone(state);
@@ -37,8 +37,14 @@ if(model&&ShareInbox){
   const main=model.menuEntries({...state,runtime:{mainAgentId:'bot-1'}}).find(entry=>entry.botId==='bot-1').avatarKey;
   assert.equal(main,plain);
  });
- test('only WeChat-enabled recipients get at most twelve slots in configured order',()=>{
-  const input=structuredClone(state);input.recipients[0].enabled=false;input.recipients[1].sources.wechat=false;
+ test('a WhatsApp-only recipient still gets a share slot',()=>{
+  const input=structuredClone(state);
+  input.recipients[0].sources={share:false,whatsapp:true};
+  const slots=model.menuEntries(input);
+  assert.equal(slots[0].botId,'bot-0');
+ });
+ test('only general-source recipients get at most twelve slots in configured order',()=>{
+  const input=structuredClone(state);input.recipients[0].enabled=false;input.recipients[1].sources.share=false;
   const slots=model.menuEntries(input);assert.equal(slots.length,12);assert.equal(slots[0].botId,'bot-2');
   assert.equal(model.menuEntries({...input,accountBusy:true}).length,0);
  });
@@ -51,7 +57,7 @@ if(model&&ShareInbox){
   const entries=model.menuEntries(state);const renamed=structuredClone(state);renamed.bots[0].name='New name';
   assert.equal(model.menuPlan(renamed,{entries:entries.map((e,i)=>({...e,slot:i+1}))}).rebuild,true);
  });
- test('a newly enabled Bot keeps the slots already shown to WeChat',()=>{
+ test('a newly enabled Bot keeps the slots already shown in the share sheet',()=>{
   const first=model.menuEntries(state).slice(0,1).map(entry=>({...entry,slot:1,generation:1,extensionId:model.extensionIdentifier(1,1)}));
   const input=structuredClone(state);input.recipients.forEach((recipient,index)=>recipient.enabled=index<2);
   const plan=model.menuPlan(input,{layoutVersion:4,entries:first});
@@ -112,6 +118,31 @@ test('a preparing marker opens the composer target before the files are copied',
   assert.equal(preparing.length,1);
   assert.equal(preparing[0].botId,'bot-0');
   assert.equal(preparing[0].mode,'compose');
+ });
+ test('a shared _chat.txt is delivered as WhatsApp with the source prefix',async t=>{
+  const {root,inbox,received,session}=await setup(t);
+  session.sourceDefaults=()=>({share:{botId:'',prefix:''},whatsapp:{botId:'bot-0',prefix:'整理要点、痛点和可做的选题'}});
+  const directory=join(root,'Ready','wa-batch');
+  await mkdir(directory,{recursive:true});
+  await writeFile(join(directory,'_chat.txt'),'[31/12/2024, 23:59:59] Alice: Hello\n[01/01/2025, 09:01:00] Bob: Hi\n');
+  await writeFile(join(directory,'manifest.json'),JSON.stringify({version:1,id:'wa-batch',accountId:'a',botId:'bot-0',source:'wechat',createdAt:Date.now(),mode:'compose',prefix:'bot-prefix',text:'',title:'',files:[{relativePath:'_chat.txt',name:'_chat.txt'}]}));
+  await inbox.drain();
+  assert.equal(received.length,1);
+  assert.equal(received[0].source,'whatsapp');
+  assert.equal(received[0].sourceTag,'WhatsApp');
+  assert.equal(received[0].originSource,'share');
+  assert.equal(received[0].sourceId,'whatsapp:wa-batch');
+  assert.equal(received[0].policy.prefix,'bot-prefix');
+  assert.match(received[0].text,/\[WhatsApp\]/);
+  assert.match(received[0].text,/整理要点、痛点和可做的选题/);
+  assert.match(received[0].text,/参与者：Alice、Bob/);
+ });
+ test('a share that is not a WhatsApp export is delivered as the general source',async t=>{
+  const {root,inbox,received}=await setup(t);await batch(root,'plain');await inbox.drain();
+  assert.equal(received.length,1);
+  assert.equal(received[0].source,'share');
+  assert.equal(received[0].sourceTag,undefined);
+  assert.equal(received[0].sourceId,'share:plain');
  });
  test('imports a >4MiB native batch locally once, retaining the delivery snapshot',async t=>{
   const {root,inbox,received}=await setup(t);await batch(root);await inbox.drain();await inbox.drain();

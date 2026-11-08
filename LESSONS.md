@@ -117,6 +117,12 @@
 - 规则：改投递超时前先确认起点；测试要覆盖“创建后 91 秒再提交”。
 - Seen 1×。
 
+**识别失败的空 catch 不能包住已经改过的字段赋值。**
+- 2026-11-08：`share-inbox.mjs` 把 `files` 声明成 `const`，识别成功后赋值抛错，空 `catch` 吞掉；`source` 和正文已经改成 WhatsApp，`sourceTag` 却没写上。
+- 规则：会改 receipt 字段的识别放在赋值完成之后再提交；失败要整段回退。被 catch 住的路径用测试断言 `sourceTag`，不要只断言 `source`。
+- 证据：`desktop/src/service/share-inbox.mjs`、`desktop/test/share.test.mjs`。
+- Seen 1×（2026-11-08）。
+
 **SDK 的回复是 Bot/session 消息流，不是按请求关联的回复。**
 - 2026-10-28：SDK 只暴露完整文本 upsert；应用把新事件挂到该 session 最近一条发送中/已发送 receipt，并过滤 replay。
 - 规则：不要承诺“这条回复对应那次发送”；UI 文案说“收到新回复”，不说“对刚才那条的回复”。

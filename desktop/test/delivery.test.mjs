@@ -85,10 +85,10 @@ if (Store && Delivery) {
     const {root,store,delivery,sent} = await setup(t);
     let now=1000;delivery.now=()=>now;
     delivery.upload=async file=>{now+=1000;return {path:`server/${file.name}`,name:file.name};};
-    store.saveRecipient('a',bot.id,{enabled:true,mode:'direct',sources:{wechat:true}});
+    store.saveRecipient('a',bot.id,{enabled:true,mode:'direct',sources:{share:true}});
     const files=[];
     for(let index=0;index<100;index++){const path=join(root,`image-${index}.png`);await writeFile(path,'x');files.push(path);}
-    const item=await delivery.receive({accountId:'a',bot,source:'wechat',files,manual:false,policy:{mode:'direct',prefix:'',createdAt:1000}});
+    const item=await delivery.receive({accountId:'a',bot,source:'share',files,manual:false,policy:{mode:'direct',prefix:'',createdAt:1000}});
     await delivery.process(item.id,'a');
     assert.equal(store.get(item.id,'a').status,'sent');
     assert.equal(sent.length,1);
@@ -115,6 +115,17 @@ if (Store && Delivery) {
     // file, and the teardown hook that removes the directory runs first.
     const reopened = new Store(root);
     try { assert.equal(reopened.get(item.id,'a').status,'unconfirmed'); } finally { reopened.close(); }
+  });
+  test('a WhatsApp export shared from an enabled menu source is accepted and tagged', async t => {
+    const {delivery,store}=await setup(t);
+    store.saveRecipient('a',bot.id,{enabled:true,sources:{wechat:true}});
+    assert.equal(store.recipient('a',bot.id).sources.share,true);
+    assert.equal(store.recipient('a',bot.id).sources.wechat,false);
+    const item=await delivery.receive({accountId:'a',bot,source:'whatsapp',originSource:'share',sourceTag:'WhatsApp',text:'[WhatsApp]\n整理一下'});
+    assert.equal(item.source,'whatsapp');
+    assert.equal(item.sourceTag,'WhatsApp');
+    await assert.rejects(delivery.receive({accountId:'a',bot,source:'whatsapp',text:'untagged'}),/SOURCE_DISABLED/);
+    await assert.rejects(delivery.receive({accountId:'a',bot,source:'whatsapp',sourceTag:'WeChat',text:'nope'}),/RECEIPT_INVALID/);
   });
   test('a receipt cannot be sent under a different account', async t => {
     const {store,delivery,sent} = await setup(t);

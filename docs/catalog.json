@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-06",
+  "updated": "2026-11-08",
   "entry": "docs/README.md",
   "pages": [
     {
@@ -67,11 +67,12 @@
       "id": "subsystems-share-menu",
       "title": "分享菜单",
       "path": "docs/subsystems/share-menu.md",
-      "summary": "macOS 12 槽微信分享、独立宿主 App、注册与更新；Windows 差异。",
+      "summary": "macOS 12 槽系统分享（WhatsApp 和通用来源共用）、独立宿主 App、注册与更新；Windows 差异。",
       "tags": [
         "macos",
         "share",
-        "wechat"
+        "wechat",
+        "whatsapp"
       ],
       "status": "current"
     },

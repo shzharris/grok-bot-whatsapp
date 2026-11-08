@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 const loaded=await import('../src/share/reconciler.mjs').catch(()=>null);
 test('recipient changes automatically reconcile the native menu',()=>assert.ok(loaded?.MenuReconciler));
-const makeState=id=>({account:{id:'a'},bots:[{id,name:id}],recipients:[{botId:id,enabled:true,order:0,mode:'compose',prefix:'',sources:{wechat:true}}]});
+const makeState=id=>({account:{id:'a'},bots:[{id,name:id}],recipients:[{botId:id,enabled:true,order:0,mode:'compose',prefix:'',sources:{share:true}}]});
 if(loaded){
  test('publishes account revocation while an older installer is still running',async()=>{
   let release,started;const ready=new Promise(r=>{started=r;}),hold=new Promise(r=>{release=r;});const published=[];

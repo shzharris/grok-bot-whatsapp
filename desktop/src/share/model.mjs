@@ -16,7 +16,7 @@ export const slotExtensionPath=(root,slot)=>`${destinationPath(root,slot)}/Conte
 export function menuEntries(state){
   if(!state.account?.id||state.accountBusy)return [];
   const visible=new Set(listedBots(state.bots).map(bot=>bot.id));
-  return state.recipients.filter(r=>r.enabled&&r.sources.wechat).map((r,index)=>({r,index,bot:state.bots.find(b=>b.id===r.botId)})).filter(row=>row.bot&&visible.has(row.bot.id))
+  return state.recipients.filter(r=>r.enabled&&(r.sources.share||r.sources.whatsapp)).map((r,index)=>({r,index,bot:state.bots.find(b=>b.id===r.botId)})).filter(row=>row.bot&&visible.has(row.bot.id))
     .sort((a,b)=>a.r.order-b.r.order||a.index-b.index).slice(0,12).map(({r,bot})=>({accountId:state.account.id,botId:bot.id,botName:bot.name||'Bot',sessionId:bot.sessionId??'',mode:r.mode,prefix:r.prefix,
       avatarKey:avatarKey(bot,state),bot}));
 }

@@ -277,12 +277,13 @@ async function confirmShare(botId){
   const recipient=(latestState.recipients??[]).find(row=>row.botId===botId);
   const mode=recipient?.mode==='direct'?'direct':'compose';
   try{
-    const receipt=await rpc.call('receive',{botId,source:'wechat',text,files,manual:mode!=='direct'},RECEIVE_TIMEOUT);
+    const receipt=await rpc.call('receive',{botId,source:'share',text,files,manual:mode!=='direct'},RECEIVE_TIMEOUT);
     if(mode==='direct'){
       // receive() already sends direct receipts when the account is connected.
       // Submit only when it could not start (offline/transition), or the same
       // receipt is submitted twice and the second call reports a false failure.
-      const result=receipt.status==='needs-input'?await rpc.call('submit',{id:receipt.id,text,files},0):receipt;
+      // Use the stored text: a WhatsApp export is rewritten before this returns.
+      const result=receipt.status==='needs-input'?await rpc.call('submit',{id:receipt.id,text:receipt.text??text},0):receipt;
       if(result.status!=='sent'){
         issue(result.status==='unconfirmed'?'SEND_UNCONFIRMED':result.status==='expired'?'SEND_EXPIRED':'SEND_FAILED');
         return {ok:false};
@@ -531,7 +532,7 @@ async function readShareOrder(){
     try{
       const {stdout}=await runProcess('swift',[join(here,'../../scripts/probe-share.swift')],{timeout:25000,maxBuffer:1024*1024});
       const ids=matchShareTitles(stdout.split('\n'),menuEntries(latestState));
-      if(ids.length)return {ids,source:'wechat'};
+      if(ids.length)return {ids,source:'system'};
     }catch{}
     const known=new Set((latestState.bots??[]).map(bot=>bot.id));
     const ids=(shareMenu?.installed?.entries??[]).filter(entry=>entry.slot>=1&&entry.slot<=12&&known.has(entry.botId)).sort((a,b)=>a.slot-b.slot).map(entry=>entry.botId);
@@ -598,7 +599,7 @@ async function openComposer(botId,receipt,options={}){
   const card=ready?.card??{width:368,height:110};
   placeFloat(card.width,card.height);
   notify('composer-show',{});
-  // WeChat/share handoffs can open the composer while another app is frontmost.
+  // Share handoffs can open the composer while another app is frontmost.
   // showInactive avoids the Dock flash, so explicitly activate the accessory app
   // and refocus the text field after the card has rendered.
   if(process.platform==='darwin'){try{app.focus({steal:true});}catch{}}
@@ -810,6 +811,17 @@ async function dispatch(method,p){
       return {...publicState(),updatedBotId:result?.bot?.id??p.botId};
     }
     case 'configure':return rpc.call('configure',{botId:p.botId,patch:p.patch});
+    case 'setSourceDefaults':return rpc.call('setSourceDefaults',{patch:p.patch});
+    case 'setWhatsAppWatch':{
+      const state=await rpc.call('setWhatsAppWatch',{enabled:typeof p.enabled==='boolean'?p.enabled:undefined,dir:typeof p.dir==='string'?p.dir:undefined,resetDir:p.resetDir===true});
+      latestState=state;update();return publicState();
+    }
+    case 'chooseWhatsAppWatchDir':{
+      const picked=await dialog.showOpenDialog(ownerWindow(),{properties:['openDirectory']});
+      if(picked.canceled||!picked.filePaths?.[0])return {canceled:true};
+      const state=await rpc.call('setWhatsAppWatch',{dir:picked.filePaths[0]});
+      latestState=state;update();return publicState();
+    }
     case 'disableAllReceive':return rpc.call('disableAllReceive');
     case 'explorerMenu':{
       if(preview)throw new Error('PREVIEW_ONLY');
@@ -946,6 +958,10 @@ function serviceEvent(message){
     }else void presentShare(message.data.id);
   }
   if(message.event==='send.error'&&floatWindow&&!floatWindow.isDestroyed())floatWindow.webContents.send('anywhere:event',{event:'send-error',data:message.data});
+  if(message.event==='whatsapp.imported'&&!preview&&Notification.isSupported()){
+    const name=message.data?.chatName||message.data?.fileName||'';
+    systemNotification({title:'Grok Bot Anywhere',body:zh?`已导入 WhatsApp 聊天${name?`「${name}」`:''}`:`Imported WhatsApp chat${name?`: ${name}`:''}`}).show();
+  }
   if(message.event==='share.error'){
     issue('SHARE_IMPORT_FAILED');
     if(!preview&&Notification.isSupported())systemNotification({title:'Grok Bot Anywhere',body:zh?'这次转发没有导入，内容还在本地。请到发送记录查看。':'This forward could not be imported. The content stays local; check Send history.'}).show();
@@ -1047,7 +1063,7 @@ if(!app.requestSingleInstanceLock({argv:process.argv})&&!smoke){app.quit();}else
   loadShellPrefs();
   const loginStartup=loginItemStartup({known:loginItemKnown,enabled:openAtLogin});
   if(loginStartup&&shouldApplyLoginItem({preview,packaged:app.isPackaged})){try{applyLoginItem(loginStartup.openAtLogin,app);}catch{/* Keep the saved preference when the system rejects it. */}}
-  latestState=await rpc.call('initialize',{root:join(app.getPath('userData'),'inbox'),shareRoot:shareMenu?.root,preview,locale:app.getLocale()});
+  latestState=await rpc.call('initialize',{root:join(app.getPath('userData'),'inbox'),shareRoot:shareMenu?.root,preview,locale:app.getLocale(),downloadsDir:app.getPath('downloads')});
   applyShortcuts(latestState.shortcuts);
   if(menuReconciler)menuReconciler.request(latestState);
   void refreshFinderIfStale();
