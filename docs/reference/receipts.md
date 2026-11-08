@@ -8,7 +8,8 @@
 | --- | --- |
 | `id` | receipt UUID |
 | `accountId` / `botId` / `botName` / `sessionId` | 冻结的投递目标 |
-| `source` | `wechat` / `shortcuts` / `share` / `drop` |
+| `source` | `wechat` / `whatsapp` / `shortcuts` / `share` / `drop` |
+| `sourceTag` | 识别为 WhatsApp 导出时为 `WhatsApp`；其它来源没有这个字段 |
 | `text` / `title` | 正文与可识别标题（微信 ZIP 等） |
 | `files[{path,name,bytes}]` | 本地副本；`path` 不离开服务进程 |
 | `mode` | `compose` 或 `direct`（创建时冻结） |
@@ -17,7 +18,7 @@
 | `status` / `phase` | 用户可见状态 / 内部阶段 |
 | `error` | 稳定错误码 |
 | `progress` | 发送小条用的阶段进度：`{stage:'upload'|'send'|'done', name, bytes, totalBytes, index, total, percent}` |
-| `sourceId` | 去重键（微信 `wechat:<batchId>`） |
+| `sourceId` | 去重键（分享批次 `wechat:<batchId>` 或 `whatsapp:<batchId>`） |
 | `replies[]` | 该 receipt 收到的回复事件 |
 | `sentAt` / `delivery` | 明确成功后的时间与服务端投递信息 |
 | `holdResolved` | 用户已核对，解除该 Bot 的暂停 |

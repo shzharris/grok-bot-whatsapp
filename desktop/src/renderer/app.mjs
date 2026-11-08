@@ -378,7 +378,7 @@ function renderChat(content){
   const next=enabled.checked;settingsBody.hidden=!next;
   void applyConfig(bot.id,{enabled:next},()=>{enabled.checked=!next;settingsBody.hidden=next;});
  });
- card.append(settingRow(t('接收转发','Receive forwards'),enabled,t('微信和通用来源才会把内容交给这个 Bot。','WeChat and the general sources deliver content to this Bot.')));
+ card.append(settingRow(t('接收转发','Receive forwards'),enabled,t('微信、WhatsApp 和通用来源才会把内容交给这个 Bot。','WeChat, WhatsApp, and the general sources deliver content to this Bot.')));
  let currentMode=recipient?.mode==='direct'?'direct':'compose';
  const selectSegment=(node,value)=>{for(const button of node.children)button.classList.toggle('selected',button.dataset.value===value);};
  const mode=el('div','segment');mode.setAttribute('aria-label',t('收到之后','After receiving'));
@@ -416,7 +416,14 @@ function renderChat(content){
   const previous=wechatOn;wechatOn=!previous;wechat.classList.toggle('selected',wechatOn);wechat.setAttribute('aria-pressed',String(wechatOn));
   void applyConfig(bot.id,{sources:{wechat:wechatOn}},()=>{wechatOn=previous;wechat.classList.toggle('selected',previous);wechat.setAttribute('aria-pressed',String(previous));});
  });
- sources.append(general,...(shortcut?[shortcut]:[]),wechat);
+ let whatsappOn=!!recipient?.sources?.whatsapp;
+ const whatsapp=el('button',`source-chip${whatsappOn?' selected':''}`,t('WhatsApp','WhatsApp'));
+ whatsapp.type='button';whatsapp.setAttribute('aria-pressed',String(whatsappOn));
+ whatsapp.addEventListener('click',()=>{
+  const previous=whatsappOn;whatsappOn=!previous;whatsapp.classList.toggle('selected',whatsappOn);whatsapp.setAttribute('aria-pressed',String(whatsappOn));
+  void applyConfig(bot.id,{sources:{whatsapp:whatsappOn}},()=>{whatsappOn=previous;whatsapp.classList.toggle('selected',previous);whatsapp.setAttribute('aria-pressed',String(previous));});
+ });
+ sources.append(general,...(shortcut?[shortcut]:[]),wechat,whatsapp);
  // Windows has a single share entry for every receiving Bot, so the per-source
  // switches would promise a choice that does not exist there.
  if(state.host?.platform!=='win32')settingsBody.append(settingRow(t('来源','Sources'),sources));
@@ -464,7 +471,7 @@ function renderInbox(content){
   const row=el('article','receipt'),top=el('div','receipt-top'),label=el('div','receipt-label');
   const bot=state.bots.find(entry=>entry.id===item.botId);
   if(bot){const face=el('div','face-host');face.dataset.bot=bot.id;face.dataset.size='32';top.append(face);}
-  label.append(el('h2','',item.title||item.botName),el('div','receipt-meta',new Date(item.createdAt).toLocaleString(document.documentElement.lang)));
+  label.append(el('h2','',item.title||item.botName),el('div','receipt-meta',[item.sourceTag,new Date(item.createdAt).toLocaleString(document.documentElement.lang)].filter(Boolean).join(' · ')));
   top.append(label,el('span',`status ${item.status}`,['uploading','sending'].includes(item.phase)?t('正在发送','Sending'):statusLabel(item)));row.append(top);
   if(item.text)row.append(el('p','record-text',item.text));
   const files=el('div','files');for(const file of item.files??[])files.append(el('span','file',`${file.name} · ${(file.bytes/1024/1024).toFixed(1)} MB`));if(item.files?.length)row.append(files);
@@ -578,6 +585,39 @@ function settingsTabBar(){
  });
  return tablist;
 }
+function sourceDefaultsPanel(){
+ const panel=el('section','group');
+ panel.append(settingRow(t('来源','Sources'),el('span'),t('每个来源可以指定默认 Bot 和一段前缀。分享时点哪个 Bot 就交给哪个；默认 Bot 会打开对应来源。WhatsApp 导出会带上来源标记 WhatsApp 和这里的前缀。','Each source can have a default Bot and a prefix. The Bot you tap in the share sheet still receives that share; the default Bot turns that source on. A WhatsApp export carries the WhatsApp tag and this prefix.')));
+ for(const [source,label] of [['wechat',t('微信','WeChat')],['whatsapp','WhatsApp']]){
+  const current=state.sourceDefaults?.[source]??{botId:'',prefix:''};
+  const picker=el('div','source-picker');
+  const choose=(botId,prefix)=>{
+   const previous=state.sourceDefaults;
+   void run(async()=>{
+    try{await api.setSourceDefaults({[source]:{botId,prefix}});}
+    catch(error){state.sourceDefaults=previous;render();throw error;}
+   });
+  };
+  const none=el('button',`source-chip${current.botId?'':' selected'}`,t('未指定','None'));
+  none.type='button';none.setAttribute('aria-pressed',String(!current.botId));
+  none.addEventListener('click',()=>choose('',current.prefix));
+  picker.append(none);
+  for(const bot of orderedBots()){
+   const chip=el('button',`source-chip${current.botId===bot.id?' selected':''}`,bot.name);
+   chip.type='button';chip.setAttribute('aria-pressed',String(current.botId===bot.id));
+   chip.addEventListener('click',()=>choose(bot.id,current.prefix));
+   picker.append(chip);
+  }
+  panel.append(settingRow(t(`${label}默认 Bot`,`${label} default Bot`),picker));
+  const prefix=el('input','prefix');
+  prefix.placeholder=t('例如：整理要点、痛点和可做的选题','For example: list the decisions and open questions');
+  prefix.setAttribute('aria-label',t(`${label}前缀`,`${label} prefix`));
+  prefix.value=current.prefix??'';
+  prefix.addEventListener('change',()=>choose(current.botId,prefix.value));
+  panel.append(settingRow(t(`${label}前缀`,`${label} prefix`),prefix));
+ }
+ return panel;
+}
 function hostSwitch(label,help,checked,aria,apply){
  const row=el('div','group-row'),copy=el('div','group-copy');
  copy.append(el('div','group-label',label));
@@ -607,7 +647,7 @@ function renderSettings(content){
  for(const [value,label] of [['system',t('系统','System')],['light',t('白','Light')],['dark',t('黑','Dark')]]){
   const choice=el('button',state.theme===value?'selected':'',label);choice.type='button';choice.addEventListener('click',()=>run(()=>api.theme(value)));themes.append(choice);
  }
- themeRow.append(themes);appearance.append(themeRow);if(settingsTab==='general')panel.append(account,appearance);
+ themeRow.append(themes);appearance.append(themeRow);if(settingsTab==='general')panel.append(account,appearance,sourceDefaultsPanel());
  const keys=el('section','group');
  keys.append(shortcutRow('compose',t('通用快捷键','General shortcut'),t('打开上次用过的 Bot。点按键，再按下组合。Esc 取消。','Opens the Bot you used last. Click the key, then press a combination. Esc cancels.')));
  keys.append(shortcutRow('open',t('在 Grok Bot 中打开','Open in Grok Bot'),t('打开上次选中的 Bot。链接是 grokbot://app/v1/agent?id= 加上这个 Bot 的编号。','Opens the Bot you selected last. The link is grokbot://app/v1/agent?id= plus that Bot id.')));
@@ -637,7 +677,7 @@ function renderSettings(content){
  cliRow.append(cliCopy,cliSwitch);cliPanel.append(cliRow);
  if(settingsTab==='share'&&state.host?.platform==='darwin'){
   const menu=state.host.menu??{},wechatPanel=el('section','group'),row=el('div','group-row'),info=el('div');
-  info.append(el('div','group-label',t('微信转发','WeChat')),el('div','group-help',!menu.available?t('这个版本没有分享扩展','Sharing extensions are not in this build'):menu.busy?t('正在同步菜单','Syncing the menu'):menu.needsUpdate?t('设置已保存，需要重新同步','Saved. Sync to update.'):t(`已启用 ${menu.registered??0} 个入口`,`${menu.registered??0} destinations on`)));
+  info.append(el('div','group-label',t('分享菜单','Share menu')),el('div','group-help',!menu.available?t('这个版本没有分享扩展','Sharing extensions are not in this build'):menu.busy?t('正在同步菜单','Syncing the menu'):menu.needsUpdate?t('设置已保存，需要重新同步','Saved. Sync to update.'):t(`已启用 ${menu.registered??0} 个入口。微信和 WhatsApp 共用这 12 个槽。`,`${menu.registered??0} destinations on. WeChat and WhatsApp share these 12 slots.`)));
   const update=smallButton(t('重新同步','Sync again'),async()=>{update.disabled=true;try{const result=await api.updateMenu();toast(t(`已同步 ${result.registered} 个入口。若微信里没变化，请完全退出微信再打开；微信会缓存旧的分享菜单。`,`Synced ${result.registered} destinations. If WeChat still shows the old menu, quit WeChat completely and reopen it; WeChat caches the sharing menu.`));}catch{}finally{update.disabled=false;}});
   update.disabled=!menu.available||menu.busy||!!state.accountBusy;row.append(info,update);wechatPanel.append(row);
   const read=smallButton(menuReading?t('正在读取','Reading'):t('读取微信顺序','Read WeChat order'),readMenuOrder);

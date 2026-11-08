@@ -23,7 +23,7 @@ final class ShareViewController: NSViewController {
             let configuration = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("configuration.json"))) as? [String: Any] ?? [:]
             guard let accountID = binding["accountId"] as? String, configuration["accountId"] as? String == accountID,
                   let botID = binding["botId"] as? String,
-                  let entry = (configuration["entries"] as? [[String: Any]])?.first(where: { $0["botId"] as? String == botID && $0["accountId"] as? String == accountID }) else { throw failure("此接收单位已关闭或账号已切换，请更新微信转发菜单。") }
+                  let entry = (configuration["entries"] as? [[String: Any]])?.first(where: { $0["botId"] as? String == botID && $0["accountId"] as? String == accountID }) else { throw failure("此接收单位已关闭或账号已切换，请更新分享菜单。") }
             let id = UUID().uuidString.lowercased(), fileManager = FileManager.default
             let stageRoot = root.appendingPathComponent("Staging", isDirectory: true), readyRoot = root.appendingPathComponent("Ready", isDirectory: true), preparingRoot = root.appendingPathComponent("Preparing", isDirectory: true)
             try fileManager.createDirectory(at: stageRoot, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])

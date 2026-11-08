@@ -15,7 +15,7 @@
 | 应用图标 | `build/icon.ico`；`signExecutable: false` 保留 exe 图标/metadata，仅跳过签名 |
 | skills | 复制 skill；Claude Code 用 junction |
 | Explorer 右键 | `HKCU\Software\Classes\*\shell\GrokBotAnywhere` 级联，每个启用 Bot 一行 |
-| 收件/发送 | 与 macOS 同一套服务进程与 SQLite |
+| 收件/发送 | 与 macOS 同一套服务进程与 SQLite。拖入或分享 WhatsApp 的 `_chat.txt` / zip 会走同一套解析；此路径未在 Windows 实机运行 |
 | 打包 | `npm run package:win` → 未签名 zip；`npm run package:win-store` → 商店 MSIX |
 
 ## 微信分享

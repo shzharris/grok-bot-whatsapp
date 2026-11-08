@@ -116,6 +116,15 @@ if (Store && Delivery) {
     const reopened = new Store(root);
     try { assert.equal(reopened.get(item.id,'a').status,'unconfirmed'); } finally { reopened.close(); }
   });
+  test('a WhatsApp export shared from an enabled menu source is accepted and tagged', async t => {
+    const {delivery,store}=await setup(t);
+    store.saveRecipient('a',bot.id,{enabled:true,sources:{wechat:true}});
+    const item=await delivery.receive({accountId:'a',bot,source:'whatsapp',originSource:'wechat',sourceTag:'WhatsApp',text:'[WhatsApp]\n整理一下'});
+    assert.equal(item.source,'whatsapp');
+    assert.equal(item.sourceTag,'WhatsApp');
+    await assert.rejects(delivery.receive({accountId:'a',bot,source:'whatsapp',text:'untagged'}),/SOURCE_DISABLED/);
+    await assert.rejects(delivery.receive({accountId:'a',bot,source:'whatsapp',sourceTag:'WeChat',text:'nope'}),/RECEIPT_INVALID/);
+  });
   test('a receipt cannot be sent under a different account', async t => {
     const {store,delivery,sent} = await setup(t);
     store.saveRecipient('a',bot.id,{enabled:true,sources:{drop:true}});

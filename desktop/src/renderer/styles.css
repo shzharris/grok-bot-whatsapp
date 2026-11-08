@@ -112,6 +112,7 @@ main{display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0;paddin
 .segment button{flex:1;height:28px;border-radius:6px;color:var(--secondary);font-size:12px;white-space:nowrap}
 .segment button.selected{background:var(--bg);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .sources{display:flex;flex-wrap:nowrap;gap:8px;margin:0}
+.source-picker{display:flex;flex-wrap:wrap;gap:8px;margin:0;justify-content:flex-end}
 .source-chip{height:28px;padding:0 10px;border-radius:999px;background:var(--fill);color:var(--secondary);font-size:12px;white-space:nowrap;flex:none}
 .source-chip.selected{background:var(--primary-soft);color:var(--primary-ink)}
 .bot-filter{position:relative;width:min(280px,100%)}
@@ -164,6 +165,7 @@ main{display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0;paddin
 .group-row:last-child{border-bottom:0}
 .group-row .segment{max-width:320px;margin-left:auto}
 .group-row .sources{flex:1 0 auto;justify-content:flex-end;min-width:max-content}
+.group-row .source-picker{flex:1 1 220px;min-width:0}
 .group-row:has(.sources)>.group-copy{flex:none}
 .detail .primary,.detail .secondary{background:light-dark(rgba(0,0,0,.06),rgba(255,255,255,.12));color:var(--text);box-shadow:none;font-weight:600}
 .detail .primary:hover,.detail .secondary:hover{background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.18))}

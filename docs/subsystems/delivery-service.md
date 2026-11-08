@@ -23,6 +23,8 @@
 | `service/delivery.mjs` | 一条 receipt 的完整投递状态机 |
 | `service/upload.mjs` | 文件上传（单 PUT / 分片边界） |
 | `service/share-inbox.mjs` | 扫描 `ShareInbox/Ready`、校验 manifest、导入、移动目录 |
+| `service/whatsapp-export.mjs` | 识别并解析 WhatsApp 导出（`_chat.txt` 或含它的 zip） |
+| `service/source-defaults.mjs` | 每个来源的默认 Bot 和前缀 |
 | `main/rpc.mjs` | 主进程侧 RPC 客户端 |
 
 ## RPC 方法
@@ -31,11 +33,12 @@
 
 | 方法 | 作用 |
 | --- | --- |
-| `snapshot` | 全量状态：账号、Bot、recipients、inbox、theme、shortcuts、runtime、watchErrors |
+| `snapshot` | 全量状态：账号、Bot、recipients、inbox、theme、shortcuts、runtime、watchErrors、sourceDefaults |
 | `login` / `desktopLogin` / `connect` / `logout` | 浏览器 PKCE、本机登录、连接、退出 |
 | `refresh` | 刷新名单/运行时 |
 | `duplicateBot` | 把同一 Bot 加为另一个接收单位（同名分组场景） |
 | `configure` | 改 recipient（enabled/mode/prefix/sources/order） |
+| `setSourceDefaults` | 改某个来源的默认 Bot 和前缀；指定 Bot 时打开该来源 |
 | `disableAllReceive` | 单事务关闭该账号所有 enabled recipient |
 | `receive` | 新建 receipt（入口统一走这里） |
 | `submit` / `submitAsync` / `retry` / `resolve` / `composer` / `dismissComposer` | 补字发送、后台发送并立即返回 receipt id、重试失败项、核对解锁、取草稿、关闭草稿并清理附件 |
@@ -59,6 +62,7 @@ preferences(key, value JSON, PRIMARY KEY(key))
 - 文件权限 `0600`，目录 `0700`；WAL + `synchronous=FULL`。
 - 启动时修复中断状态：`phase=sending` → `unconfirmed/held`；`phase=uploading` → `failed/ready`。
 - receipt 里的附件复制到 `inbox/files/<receiptId>/`，数据库只存路径/名称/字节数。
+- `sourceDefaults:<accountId>` 存在 preferences 里：`{wechat:{botId,prefix}, whatsapp:{botId,prefix}}`。前缀属于来源，写进正文；Bot 自己的 direct 前缀仍包在外面。
 
 ## 投递状态机
 
@@ -97,7 +101,7 @@ receive
 `share-inbox.mjs` 每 0.25 秒扫描 `ShareInbox/Preparing` 和 `ShareInbox/Ready`：
 
 1. 目录名只允许 `[A-Za-z0-9_-]{1,100}`，拒绝符号链接。
-2. `manifest.json` 必须版本 1、`source=wechat`、账号/投递模式/文件列表合法，大小 ≤8MB。
+2. `manifest.json` 必须版本 1、`source` 为 `wechat` 或 `whatsapp`、账号/投递模式/文件列表合法，大小 ≤8MB。WhatsApp 导出（`_chat.txt` 或含它的 zip）在导入时改记为 `whatsapp`，正文带上 `WhatsApp` 标记和该来源的前缀；原来的菜单来源仍算已开启，所以只打开了微信来源的槽也能收下这份导出。
 3. 账号不匹配或切换中：留在 `Ready`，不导入。
 4. 已存在同 `sourceId`：移到 `Imported`，不重复。
 5. 成功：`session.receive(...)` → 移到 `Imported`；配置类错误保留；其他失败写 `failure.txt` 后移到 `Rejected`。

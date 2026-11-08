@@ -1,7 +1,10 @@
-import {rm} from 'node:fs/promises';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {join} from 'node:path';
 import * as sdk from 'grok-bot-sdk';
 import {COLORS,SHAPES} from 'grok-bot-avatar-engine';
 import {Delivery} from './delivery.mjs';
+import {emptySourceDefaults,normalizeSourceDefaults,SOURCE_DEFAULT_KEYS} from './source-defaults.mjs';
+import {inspectWhatsAppIntake,prependInstruction} from './whatsapp-export.mjs';
 import {readSidebarSettings} from './runtime-settings.mjs';
 import {normalizeAccelerator,normalizeShortcutMap} from '../shortcuts.mjs';
 
@@ -48,7 +51,7 @@ export class AccountSession {
     const accountId=this.account?.id;
     return {account:this.account,connected:!!this.client,accountBusy:this.transition,bots:this.bots,recipients:accountId?this.bots.map(bot=>this.store.recipient(accountId,bot.id)):[],
       inbox:accountId?this.store.list(accountId).map(({files,...item})=>({...item,files:files.map(({name,bytes})=>({name,bytes}))})):[],
-      theme:this.store.preference('theme')??'system',shortcuts:this.shortcutMap(),runtime:this.runtime,watchErrors:this.watchErrors,backgroundSending:!!this.delivery?.inflight.size,
+      theme:this.store.preference('theme')??'system',shortcuts:this.shortcutMap(),sourceDefaults:this.sourceDefaults(),runtime:this.runtime,watchErrors:this.watchErrors,backgroundSending:!!this.delivery?.inflight.size,
       capabilities:{runtime:typeof this.client?.getRuntimeSettings==='function',statuses:typeof this.client?.listStatuses==='function'||typeof this.client?.listAgentStatuses==='function'}};
   }
   emit(){if(!this.closed)this.onEvent({event:'state',data:this.snapshot()});}
@@ -107,6 +110,24 @@ export class AccountSession {
     }catch(error){if(generation===this.generation)this.authFailure(error);throw error;}
   }
   configure(botId,patch){const accountId=this.requireAccount();if(!this.bots.some(b=>b.id===botId))throw new Error('BOT_NOT_FOUND');const result=this.store.saveRecipient(accountId,botId,patch);this.emit();return result;}
+  sourceDefaults(){
+    const accountId=this.account?.id;
+    if(!accountId)return emptySourceDefaults();
+    return normalizeSourceDefaults(this.store.preference(`sourceDefaults:${accountId}`));
+  }
+  setSourceDefaults(patch){
+    const accountId=this.requireAccount();
+    const next=normalizeSourceDefaults(patch,this.sourceDefaults(),new Set(this.bots.map(bot=>bot.id)));
+    this.store.preference(`sourceDefaults:${accountId}`,next);
+    for(const source of SOURCE_DEFAULT_KEYS){
+      const botId=next[source].botId;
+      if(!botId)continue;
+      const recipient=this.store.recipient(accountId,botId);
+      if(!recipient.enabled||recipient.sources[source]!==true)this.store.saveRecipient(accountId,botId,{enabled:true,sources:{[source]:true}});
+    }
+    this.emit();
+    return this.snapshot();
+  }
   disableAllReceive(){
     const accountId=this.requireAccount();
     const closed=this.store.disableEnabled(accountId,this.bots.map(bot=>bot.id));
@@ -151,11 +172,31 @@ export class AccountSession {
     // Local intake stays available when credentials expire.
     const delivery=this.delivery??new Delivery({store:this.store,now:this.now,onChange:()=>this.emit()});
     this.pending++;
+    let extractDir='';
     try{
-      const item=await delivery.receive({...input,accountId,bot});
+      const prepared=await this.prepareIntake(input);
+      extractDir=prepared.extractDir??'';
+      const item=await delivery.receive({...prepared.input,accountId,bot});
       if(item.mode==='direct'&&this.client&&!this.transition&&this.account?.id===accountId)await this.process(item.id);
       return this.store.get(item.id,accountId);
-    }finally{this.pending--;}
+    }finally{this.pending--;if(extractDir)await rm(extractDir,{recursive:true,force:true});}
+  }
+  async prepareIntake(input){
+    if(input.sourceTag==='WhatsApp')return {input};
+    const defaults=this.sourceDefaults();
+    const extractDir=await mkdtemp(join(this.store.root,'wa-'));
+    try{
+      const inspected=await inspectWhatsAppIntake({files:input.files??[],fileNames:input.fileNames,text:input.text??'',title:input.title??'',prefix:defaults.whatsapp?.prefix??'',extractDir});
+      if(!inspected){
+        await rm(extractDir,{recursive:true,force:true});
+        const text=input.source==='wechat'?prependInstruction(input.text??'',defaults.wechat?.prefix??''):input.text;
+        return {input:{...input,text}};
+      }
+      return {extractDir,input:{...input,source:'whatsapp',originSource:input.originSource??input.source,sourceTag:'WhatsApp',text:inspected.text,title:inspected.chatName||input.title||'',files:inspected.files,fileNames:inspected.fileNames}};
+    }catch(error){
+      await rm(extractDir,{recursive:true,force:true});
+      throw error;
+    }
   }
   async process(id,edit){
     this.requireClient();const accountId=this.requireAccount();

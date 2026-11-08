@@ -1,0 +1,5 @@
+[12/31/24, 11:59:59 PM] Alice: Hello
+this continues
+[12/31/24, 11:59:59 PM] Alice: ‎<attached: 00000001-PHOTO.jpg>
+[1/1/25, 9:00:00 AM] Messages and calls are end-to-end encrypted. Only people in this chat can read, listen to, or share them.
+[1/1/25, 9:01:00 AM] Bob: Hi there

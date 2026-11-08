@@ -8,7 +8,7 @@ export function pickerBots(state,{allSources=false}={}){
   if(!state.account?.id||state.accountBusy)return [];
   const visible=new Set(listedBots(state.bots).map(bot=>bot.id));
   return state.recipients
-    .filter(recipient=>recipient.enabled&&(allSources||recipient.sources?.wechat))
+    .filter(recipient=>recipient.enabled&&(allSources||recipient.sources?.wechat||recipient.sources?.whatsapp))
     .map((recipient,index)=>({recipient,index,bot:state.bots.find(bot=>bot.id===recipient.botId)}))
     .filter(row=>row.bot&&visible.has(row.bot.id))
     .sort((a,b)=>a.recipient.order-b.recipient.order||a.index-b.index)

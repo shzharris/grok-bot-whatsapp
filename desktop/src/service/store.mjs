@@ -2,7 +2,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync, chmodSync} from 'node:fs';
 import {join} from 'node:path';
 
-export const SOURCES = ['wechat','shortcuts','share','drop'];
+export const SOURCES = ['wechat','whatsapp','shortcuts','share','drop'];
 export class InboxStore {
   constructor(root) {
     this.root = root;

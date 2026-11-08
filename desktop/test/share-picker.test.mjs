@@ -24,6 +24,11 @@ test('the picker follows the configured order and drops unknown Bots',()=>{
   assert.deepEqual(rows.map(row=>row.botId),['b','a','c']);
 });
 
+test('a WhatsApp-only Bot is listed in the share picker',()=>{
+  const rows=pickerBots(state({recipients:[recipient('a',{sources:{wechat:false,whatsapp:true}}),recipient('b',{sources:{wechat:false}})]}));
+  assert.deepEqual(rows.map(row=>row.botId),['a']);
+});
+
 test('Windows lists every receiving Bot because it has no per-source choice',()=>{
   const recipients=[recipient('a',{sources:{wechat:false,drop:false}}),recipient('b',{sources:{wechat:true}}),recipient('c',{enabled:false,sources:{wechat:true}})];
   assert.deepEqual(pickerBots(state({recipients})).map(row=>row.botId),['b']);

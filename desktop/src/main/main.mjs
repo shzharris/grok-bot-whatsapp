@@ -282,7 +282,8 @@ async function confirmShare(botId){
       // receive() already sends direct receipts when the account is connected.
       // Submit only when it could not start (offline/transition), or the same
       // receipt is submitted twice and the second call reports a false failure.
-      const result=receipt.status==='needs-input'?await rpc.call('submit',{id:receipt.id,text,files},0):receipt;
+      // Use the stored text: a WhatsApp export is rewritten before this returns.
+      const result=receipt.status==='needs-input'?await rpc.call('submit',{id:receipt.id,text:receipt.text??text},0):receipt;
       if(result.status!=='sent'){
         issue(result.status==='unconfirmed'?'SEND_UNCONFIRMED':result.status==='expired'?'SEND_EXPIRED':'SEND_FAILED');
         return {ok:false};
@@ -810,6 +811,7 @@ async function dispatch(method,p){
       return {...publicState(),updatedBotId:result?.bot?.id??p.botId};
     }
     case 'configure':return rpc.call('configure',{botId:p.botId,patch:p.patch});
+    case 'setSourceDefaults':return rpc.call('setSourceDefaults',{patch:p.patch});
     case 'disableAllReceive':return rpc.call('disableAllReceive');
     case 'explorerMenu':{
       if(preview)throw new Error('PREVIEW_ONLY');
