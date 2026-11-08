@@ -29,7 +29,7 @@ desktop/                 Electron 应用（macOS / Windows 主产品）
   src/renderer/          主窗口、悬浮输入框、Tab 宫格、头像页
   src/share/             macOS 分享菜单模型、槽位、注册、顺序
   src/shell/             跨平台纯函数：窗口选项、托盘模型、深链、Explorer 转发
-  test/                  185 个 Node 测试
+  test/                  190 个 Node 测试
 native/macos/            Swift 原生伴侣（Touch Bar、原生输入框、语音、分享扩展宿主）
   Sources/               Swift Package 源码
   avatar/                Bloub 离线头像渲染源码
@@ -61,7 +61,7 @@ npm run docs:check
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
-| macOS | 主平台，已实机验证 | 登录、名单、悬浮输入框、12 槽分享菜单、收件与发送均跑过。WhatsApp 导出解析已实现，真实分享菜单未运行 |
+| macOS | 主平台，已实机验证 | 登录、名单、悬浮输入框、12 槽分享菜单、收件与发送均跑过。WhatsApp 导出解析和文件夹监视已实现；真实分享菜单、真实下载文件夹和系统文件夹选择器未运行 |
 | Windows | 已实现，**未实机验证** | 无边框窗口、Explorer 右键、悬浮输入框、CLI、URL 协议；微信分享入口不支持 |
 | Linux | 未支持 | 没有打包目标与平台适配，见 [Linux](platforms/linux.md) |
 
@@ -76,7 +76,7 @@ npm run docs:check
 最短路径：
 
 ```sh
-npm run test:desktop           # 185 tests
+npm run test:desktop           # 190 tests
 cd native/macos && swift build  # macOS only
 cd packages/client-protocol && npm test
 node --test native/macos/avatar/renderer.test.mjs

@@ -63,6 +63,7 @@ preferences(key, value JSON, PRIMARY KEY(key))
 - 启动时修复中断状态：`phase=sending` → `unconfirmed/held`；`phase=uploading` → `failed/ready`。
 - receipt 里的附件复制到 `inbox/files/<receiptId>/`，数据库只存路径/名称/字节数。
 - `sourceDefaults:<accountId>` 存在 preferences 里：`{share:{botId,prefix}, whatsapp:{botId,prefix}}`。前缀属于来源，写进正文；Bot 自己的 direct 前缀仍包在外面。旧数据里的 `wechat` 槽在读取时并进 `share`，已经写过的 `share` 不会被盖掉。指定通用默认 Bot 时同时打开 `share` 和 `drop`。
+- `whatsappWatch` 存在 preferences 里：`{enabled, dir, seen}`。默认关闭。`dir` 为空时用主进程传来的下载文件夹。打开或更换文件夹时，把当时已经在文件夹里的导出记入 `seen`，不投递。之后新出现、大小和 mtime 稳定、并且解析器确认是 WhatsApp 导出的文件，交给 WhatsApp 默认 Bot，走和分享相同的 `receive`。不移动、不删除原文件。`seen` 用路径、大小和 mtime 去重。
 
 ## 投递状态机
 

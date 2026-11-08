@@ -25,7 +25,7 @@
 <a href="https://chat.whatsapp.com/D6GAA73V0dGE9qd9gvh2n7?mode=gi_t"><img src="https://img.shields.io/badge/加入_WhatsApp_交流群-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="加入 WhatsApp 交流群"></a>
 </p>
 
-<p><sub>macOS 主路径已实机验证 · WhatsApp 真实分享菜单未实机验证 · Windows 部分实机验证（开发模式） · Linux 暂不支持</sub></p>
+<p><sub>macOS 主路径已实机验证 · WhatsApp 真实分享菜单、下载文件夹和文件夹选择器未实机验证 · Windows 部分实机验证（开发模式） · Linux 暂不支持</sub></p>
 
 </div>
 
@@ -75,7 +75,13 @@
 
 设置里可以分别指定 WhatsApp 和通用来源的默认 Bot 与前缀。
 
-真实的 WhatsApp Mac 分享菜单和 iPhone 导出传到 Mac 的整条路径还没有在实机上跑过。单测覆盖的是导出文件的识别、解析和导入。
+### 自动导入下载文件夹
+
+WhatsApp for Mac 导出后，会把 `WhatsApp Chat - 聊天名.zip` 直接存进「下载」文件夹，有时是一份 `_chat.txt`。在 **设置 → 常规** 打开「自动导入 WhatsApp 导出」后，应用监视这个文件夹。默认是 `~/Downloads`。点「选择文件夹」可以用系统的文件夹选择器换成别的目录，点「恢复为下载文件夹」回到默认。
+
+打开之后才出现、并且已经写完的文件才会被检查。确认是 WhatsApp 导出后，交给 WhatsApp 的默认 Bot，前缀和从分享菜单导入时一样，并弹出一条通知。同一份文件不会导入第二次。未写完的下载（`.crdownload`、`.download`）和其他文件会被跳过。应用不会移动或删除这些文件。换文件夹会重新开始监视，文件夹里原来的文件不会再导入一次。
+
+真实的 WhatsApp Mac 分享菜单、iPhone 导出传到 Mac 的整条路径、真实下载文件夹，以及系统文件夹选择器，还没有在实机上跑过。单测覆盖的是导出文件的识别、解析、导入，以及在临时目录里的监视逻辑。
 
 ## 快速开始
 
@@ -188,7 +194,7 @@ flowchart LR
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
-| macOS 14+ | 主路径已实机验证 | 登录、名单、悬浮输入框、12 槽分享菜单、收件与发送、签名公证 DMG。WhatsApp 解析有单测；真实分享菜单未运行 |
+| macOS 14+ | 主路径已实机验证 | 登录、名单、悬浮输入框、12 槽分享菜单、收件与发送、签名公证 DMG。WhatsApp 解析和文件夹监视有单测；真实分享菜单、真实下载文件夹和系统文件夹选择器未运行 |
 | Windows 10/11 | 部分实机验证（开发模式） | 启动、主窗口、URL 协议、Explorer 级联、CLI、系统分享入口 + Bot 选择面板已在真机跑过；安装包、右键点击，以及 WhatsApp 文件拖入未运行 |
 | Linux | 未支持 | 没有打包目标与平台适配 |
 
@@ -262,7 +268,7 @@ Windows 分发首选 Microsoft Store：个人开发者账号免费，商店认�
 
 macOS 主路径可用。还没完成的部分：
 
-- [ ] WhatsApp for Mac 的真实分享菜单，以及 iPhone 导出文件在 Mac 上的整条分享路径。
+- [ ] WhatsApp for Mac 的真实分享菜单、iPhone 导出文件在 Mac 上的整条分享路径、真实下载文件夹自动导入，以及系统文件夹选择器。
 - [ ] Windows 实机验证（剩余）：安装包首次启动、Explorer 右键点击、悬浮输入框焦点、托盘点击，以及 WhatsApp 导出文件拖入。已跑过的项见 [Windows](docs/platforms/windows.md)。
 - [ ] Linux 桌面支持：先决定系统集成最低集，再补打包目标。
 - [ ] Touch Bar 硬件和语音权限的回归。

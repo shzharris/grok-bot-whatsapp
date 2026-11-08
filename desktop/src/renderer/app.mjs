@@ -57,6 +57,7 @@ const errorMessages={
  LOGIN_ITEM_FAILED:['开机自启动没有写进系统。','Launch at login was not written to the system.'],
  EXPLORER_SYNC_FAILED:['资源管理器右键菜单没有同步。','The Explorer menu did not sync.'],
  EXPLORER_MENU_UNAVAILABLE:['这个系统没有资源管理器右键菜单。','This system has no Explorer menu.'],
+ WATCH_DIR_INVALID:['这个文件夹打不开。','That folder could not be opened.'],
  DEEPLINK_IGNORED:['这个链接没有执行。','This link did not run.']
 };
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,5000);}
@@ -611,6 +612,19 @@ function sourceDefaultsPanel(){
  }
  return panel;
 }
+function whatsAppWatchPanel(){
+ const watch=state.whatsappWatch??{enabled:false,path:'',usingDefault:true};
+ const panel=el('section','group');
+ panel.append(hostSwitch(t('自动导入 WhatsApp 导出','Auto-import WhatsApp exports'),t('监视文件夹里新出现、并且已经写完的 WhatsApp 导出，交给 WhatsApp 的默认 Bot，前缀和分享导入相同。不会移动或删除原来的文件。','Watches for WhatsApp exports that appear after this is on, once the file has finished writing, and gives them to the WhatsApp default Bot with that prefix. The original files stay where they are.'),!!watch.enabled,t('自动导入 WhatsApp 导出','Auto-import WhatsApp exports'),next=>api.setWhatsAppWatch({enabled:next})));
+ const copy=el('div','group-copy');
+ copy.append(el('div','group-label',t('文件夹','Folder')),el('div','watch-path',watch.path||'~/Downloads'),el('div','group-help',watch.usingDefault?t('默认是下载文件夹。换文件夹后，只导入之后新出现的文件。','Downloads is the default. After a folder change, only files that appear later are imported.'):t('换文件夹后，只导入之后新出现的文件。','After a folder change, only files that appear later are imported.')));
+ const choose=smallButton(t('选择文件夹','Choose folder'),()=>api.chooseWhatsAppWatchDir());
+ const reset=smallButton(t('恢复为下载文件夹','Reset to Downloads'),()=>api.setWhatsAppWatch({resetDir:true}),'secondary');
+ reset.disabled=!!watch.usingDefault;
+ const buttons=el('div','row-actions');buttons.append(choose,reset);
+ panel.append(el('div','group-row',''));panel.lastChild.append(copy,buttons);
+ return panel;
+}
 function hostSwitch(label,help,checked,aria,apply){
  const row=el('div','group-row'),copy=el('div','group-copy');
  copy.append(el('div','group-label',label));
@@ -640,7 +654,7 @@ function renderSettings(content){
  for(const [value,label] of [['system',t('系统','System')],['light',t('白','Light')],['dark',t('黑','Dark')]]){
   const choice=el('button',state.theme===value?'selected':'',label);choice.type='button';choice.addEventListener('click',()=>run(()=>api.theme(value)));themes.append(choice);
  }
- themeRow.append(themes);appearance.append(themeRow);if(settingsTab==='general')panel.append(account,appearance,sourceDefaultsPanel());
+ themeRow.append(themes);appearance.append(themeRow);if(settingsTab==='general')panel.append(account,appearance,sourceDefaultsPanel(),whatsAppWatchPanel());
  const keys=el('section','group');
  keys.append(shortcutRow('compose',t('通用快捷键','General shortcut'),t('打开上次用过的 Bot。点按键，再按下组合。Esc 取消。','Opens the Bot you used last. Click the key, then press a combination. Esc cancels.')));
  keys.append(shortcutRow('open',t('在 Grok Bot 中打开','Open in Grok Bot'),t('打开上次选中的 Bot。链接是 grokbot://app/v1/agent?id= 加上这个 Bot 的编号。','Opens the Bot you selected last. The link is grokbot://app/v1/agent?id= plus that Bot id.')));

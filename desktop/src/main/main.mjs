@@ -812,6 +812,16 @@ async function dispatch(method,p){
     }
     case 'configure':return rpc.call('configure',{botId:p.botId,patch:p.patch});
     case 'setSourceDefaults':return rpc.call('setSourceDefaults',{patch:p.patch});
+    case 'setWhatsAppWatch':{
+      const state=await rpc.call('setWhatsAppWatch',{enabled:typeof p.enabled==='boolean'?p.enabled:undefined,dir:typeof p.dir==='string'?p.dir:undefined,resetDir:p.resetDir===true});
+      latestState=state;update();return publicState();
+    }
+    case 'chooseWhatsAppWatchDir':{
+      const picked=await dialog.showOpenDialog(ownerWindow(),{properties:['openDirectory']});
+      if(picked.canceled||!picked.filePaths?.[0])return {canceled:true};
+      const state=await rpc.call('setWhatsAppWatch',{dir:picked.filePaths[0]});
+      latestState=state;update();return publicState();
+    }
     case 'disableAllReceive':return rpc.call('disableAllReceive');
     case 'explorerMenu':{
       if(preview)throw new Error('PREVIEW_ONLY');
@@ -948,6 +958,10 @@ function serviceEvent(message){
     }else void presentShare(message.data.id);
   }
   if(message.event==='send.error'&&floatWindow&&!floatWindow.isDestroyed())floatWindow.webContents.send('anywhere:event',{event:'send-error',data:message.data});
+  if(message.event==='whatsapp.imported'&&!preview&&Notification.isSupported()){
+    const name=message.data?.chatName||message.data?.fileName||'';
+    systemNotification({title:'Grok Bot Anywhere',body:zh?`已导入 WhatsApp 聊天${name?`「${name}」`:''}`:`Imported WhatsApp chat${name?`: ${name}`:''}`}).show();
+  }
   if(message.event==='share.error'){
     issue('SHARE_IMPORT_FAILED');
     if(!preview&&Notification.isSupported())systemNotification({title:'Grok Bot Anywhere',body:zh?'这次转发没有导入，内容还在本地。请到发送记录查看。':'This forward could not be imported. The content stays local; check Send history.'}).show();
@@ -1049,7 +1063,7 @@ if(!app.requestSingleInstanceLock({argv:process.argv})&&!smoke){app.quit();}else
   loadShellPrefs();
   const loginStartup=loginItemStartup({known:loginItemKnown,enabled:openAtLogin});
   if(loginStartup&&shouldApplyLoginItem({preview,packaged:app.isPackaged})){try{applyLoginItem(loginStartup.openAtLogin,app);}catch{/* Keep the saved preference when the system rejects it. */}}
-  latestState=await rpc.call('initialize',{root:join(app.getPath('userData'),'inbox'),shareRoot:shareMenu?.root,preview,locale:app.getLocale()});
+  latestState=await rpc.call('initialize',{root:join(app.getPath('userData'),'inbox'),shareRoot:shareMenu?.root,preview,locale:app.getLocale(),downloadsDir:app.getPath('downloads')});
   applyShortcuts(latestState.shortcuts);
   if(menuReconciler)menuReconciler.request(latestState);
   void refreshFinderIfStale();

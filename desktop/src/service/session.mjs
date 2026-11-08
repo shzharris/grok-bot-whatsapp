@@ -5,6 +5,7 @@ import {COLORS,SHAPES} from 'grok-bot-avatar-engine';
 import {Delivery} from './delivery.mjs';
 import {emptySourceDefaults,normalizeSourceDefaults,SOURCE_DEFAULT_FLAGS,SOURCE_DEFAULT_KEYS} from './source-defaults.mjs';
 import {inspectWhatsAppIntake,prependInstruction} from './whatsapp-export.mjs';
+import {WhatsAppFolderWatch} from './whatsapp-watch.mjs';
 import {readSidebarSettings} from './runtime-settings.mjs';
 import {normalizeAccelerator,normalizeShortcutMap} from '../shortcuts.mjs';
 
@@ -37,8 +38,9 @@ async function readRuntime(client,bots,previous=emptyRuntime(),credentials){
 }
 
 export class AccountSession {
-  constructor({store,sdk:implementation=sdk,upload,onEvent=()=>{},now=Date.now}) {
-    Object.assign(this,{store,sdk:implementation,upload,onEvent,now});
+  constructor({store,sdk:implementation=sdk,upload,onEvent=()=>{},now=Date.now,downloadsDir=''}) {
+    Object.assign(this,{store,sdk:implementation,upload,onEvent,now,downloadsDir});
+    this.whatsappWatch=new WhatsAppFolderWatch({session:this,downloadsDir});
     const cached=store.preference('lastAccount');
     this.account=cached?.account??null;this.bots=cached?.bots??[];
     this.client=null;this.credentials=null;this.generation=0;this.pending=0;this.transition=false;
@@ -51,7 +53,7 @@ export class AccountSession {
     const accountId=this.account?.id;
     return {account:this.account,connected:!!this.client,accountBusy:this.transition,bots:this.bots,recipients:accountId?this.bots.map(bot=>this.store.recipient(accountId,bot.id)):[],
       inbox:accountId?this.store.list(accountId).map(({files,...item})=>({...item,files:files.map(({name,bytes})=>({name,bytes}))})):[],
-      theme:this.store.preference('theme')??'system',shortcuts:this.shortcutMap(),sourceDefaults:this.sourceDefaults(),runtime:this.runtime,watchErrors:this.watchErrors,backgroundSending:!!this.delivery?.inflight.size,
+      theme:this.store.preference('theme')??'system',shortcuts:this.shortcutMap(),sourceDefaults:this.sourceDefaults(),whatsappWatch:this.whatsappWatch.view(),runtime:this.runtime,watchErrors:this.watchErrors,backgroundSending:!!this.delivery?.inflight.size,
       capabilities:{runtime:typeof this.client?.getRuntimeSettings==='function',statuses:typeof this.client?.listStatuses==='function'||typeof this.client?.listAgentStatuses==='function'}};
   }
   emit(){if(!this.closed)this.onEvent({event:'state',data:this.snapshot()});}

@@ -11,11 +11,11 @@
 
 ## 当前状态（2026-11-08）
 
-- 主产品：`desktop/`（Electron），macOS 已验证，Windows 部分实机验证（2026-11-01，开发模式），Linux 未支持。WhatsApp 导出解析已实现；真实 WhatsApp / iPhone 分享菜单未运行。
+- 主产品：`desktop/`（Electron），macOS 已验证，Windows 部分实机验证（2026-11-01，开发模式），Linux 未支持。WhatsApp 导出解析和下载文件夹监视已实现；真实分享菜单、真实下载文件夹和系统文件夹选择器未运行。
 - 原生：`native/macos/`（Swift），仅 macOS。
 - 协议：`packages/client-protocol/`，非官方、实验性。
 - 文档：`docs/` 是唯一事实来源；`docs/history/` 只作背景。
-- 基线（2026-11-08）：desktop 185 passed（`npm run test:desktop`）。client-protocol 61、avatar 1、Swift 8 为 2026-11-05 / 2026-11-01 基线，本次未重跑。Windows 实机（2026-11-01）：desktop 128 passed + 2 skipped（POSIX-only 断言）、client-protocol 60 passed。
+- 基线（2026-11-08）：desktop 190 passed（`npm run test:desktop`）。client-protocol 61、avatar 1、Swift 8 为 2026-11-05 / 2026-11-01 基线，本次未重跑。Windows 实机（2026-11-01）：desktop 128 passed + 2 skipped（POSIX-only 断言）、client-protocol 60 passed。
 - 根命令：`npm run test:all`、`npm run docs:check`、`npm run smoke`。
 
 ## 命令
@@ -48,7 +48,7 @@ desktop/                  Electron 主产品
   src/renderer/           UI（无 Node、无凭据）
   src/share/              macOS 分享槽位与注册
   src/shell/              跨平台纯函数
-  test/                   185 tests
+  test/                   190 tests
 native/macos/             Swift 伴侣 + Bloub 头像
 packages/client-protocol  非官方 SDK/CLI
 docs/                     Wiki（Current / Unverified / Historical）
