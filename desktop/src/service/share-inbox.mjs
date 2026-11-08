@@ -23,9 +23,9 @@ export class ShareInbox {
           if(this.session.account?.id!==m.accountId||this.session.transition)continue;
           if(typeof this.session.store.recipient==='function'){
             const recipient=this.session.store.recipient(m.accountId,m.botId);
-            if(!recipient.enabled||!(recipient.sources?.wechat||recipient.sources?.whatsapp))continue;
+            if(!recipient.enabled||!(recipient.sources?.share||recipient.sources?.whatsapp))continue;
           }
-          if(this.session.store.list(m.accountId).some(row=>row.sourceId===`wechat:${id}`||row.sourceId===`whatsapp:${id}`))continue;
+          if(this.session.store.list(m.accountId).some(row=>row.sourceId===`wechat:${id}`||row.sourceId===`whatsapp:${id}`||row.sourceId===`share:${id}`))continue;
           this.preparing.add(id);
           this.onPreparing({id,accountId:m.accountId,botId:m.botId,mode:m.mode,createdAt:Number.isSafeInteger(m.createdAt)?m.createdAt:Date.now()});
         }catch{continue;}
@@ -48,17 +48,20 @@ export class ShareInbox {
             files.push(path);
           }
           if(m.sessionId!==undefined&&(typeof m.sessionId!=='string'||m.sessionId.length>256))throw new Error('SHARE_MANIFEST_INVALID');
-          let source=m.source,text=m.text,title=m.title,fileNames=m.files.map(f=>f.name),sourceTag,originSource;
+          // The share extension still writes source "wechat". Anything that is not a
+          // WhatsApp export is the generic source, so older WeChat forwards keep a home.
+          const sheetSource=m.source==='wechat'?'share':m.source;
+          let source=sheetSource,text=m.text,title=m.title,fileNames=m.files.map(f=>f.name),sourceTag,originSource;
           const defaults=typeof this.session.sourceDefaults==='function'?this.session.sourceDefaults():{whatsapp:{prefix:''}};
           try{
             const inspected=await inspectWhatsAppIntake({files,fileNames,text,title,prefix:defaults.whatsapp?.prefix??'',extractDir:join(directory,'extracted')});
             if(inspected){
               source='whatsapp';text=inspected.text;title=inspected.chatName||title;files=inspected.files;fileNames=inspected.fileNames;sourceTag='WhatsApp';
-              if(m.source!=='whatsapp')originSource=m.source;
+              if(sheetSource!=='whatsapp')originSource=sheetSource;
             }
           }catch{/* A chat that cannot be read still imports as the manifest described it. */}
           const sourceId=`${source}:${m.id}`;
-          const duplicate=this.session.store.list(m.accountId).find(row=>row.sourceId===sourceId||row.sourceId===`wechat:${m.id}`||row.sourceId===`whatsapp:${m.id}`);
+          const duplicate=this.session.store.list(m.accountId).find(row=>row.sourceId===sourceId||row.sourceId===`wechat:${m.id}`||row.sourceId===`whatsapp:${m.id}`||row.sourceId===`share:${m.id}`);
           if(duplicate){await rename(directory,join(this.root,'Imported',name));continue;}
           const item=await this.session.receive({botId:m.botId,expectedAccountId:m.accountId,source,text,title,files,fileNames,sourceId,sourceTag,originSource,policy:{mode:m.mode,prefix:m.prefix,createdAt:m.createdAt,sessionId:m.sessionId??''}});
           await rename(directory,join(this.root,'Imported',name));this.onReceipt(item);

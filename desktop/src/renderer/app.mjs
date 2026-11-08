@@ -34,8 +34,8 @@ const errorMessages={
  REQUEST_TIMEOUT:['等得太久了，请到发送记录里看结果。','The operation timed out. Check Send history.'],
  CREDENTIAL_STORAGE_UNAVAILABLE:['系统凭据存储暂不可用。','System credential storage is unavailable.'],
  SERVICE_EXITED:['后台停了，请重新打开应用。','The background service stopped. Reopen the app.'],
- MENU_RECIPIENT_REQUIRED:['请先为接收单位打开微信来源。','Enable WeChat for a recipient first.'],
- MENU_UPDATE_FAILED:['微信菜单没有更新，原来的菜单还在。','The forwarding menu could not be updated.'],
+ MENU_RECIPIENT_REQUIRED:['请先为接收单位打开通用或 WhatsApp 来源。','Enable the general source or WhatsApp for a recipient first.'],
+ MENU_UPDATE_FAILED:['分享菜单没有更新，原来的菜单还在。','The share menu could not be updated.'],
  MENU_UNAVAILABLE:['这个版本没有带上分享扩展。','This build does not include sharing extensions.'],
  SHORTCUT_INVALID:['这个按键组合不能用。请带上 Ctrl、Option 或 Command。','Use a shortcut with Ctrl, Option, or Command.'],
  SHORTCUT_UNAVAILABLE:['这个快捷键被占用了，请另外录一个。','That shortcut is taken. Record another one.'],
@@ -378,7 +378,7 @@ function renderChat(content){
   const next=enabled.checked;settingsBody.hidden=!next;
   void applyConfig(bot.id,{enabled:next},()=>{enabled.checked=!next;settingsBody.hidden=next;});
  });
- card.append(settingRow(t('接收转发','Receive forwards'),enabled,t('微信、WhatsApp 和通用来源才会把内容交给这个 Bot。','WeChat, WhatsApp, and the general sources deliver content to this Bot.')));
+ card.append(settingRow(t('接收转发','Receive forwards'),enabled,t('WhatsApp 和通用来源才会把内容交给这个 Bot。','WhatsApp and the general source deliver content to this Bot.')));
  let currentMode=recipient?.mode==='direct'?'direct':'compose';
  const selectSegment=(node,value)=>{for(const button of node.children)button.classList.toggle('selected',button.dataset.value===value);};
  const mode=el('div','segment');mode.setAttribute('aria-label',t('收到之后','After receiving'));
@@ -409,13 +409,6 @@ function renderChat(content){
    void applyConfig(bot.id,{sources:{shortcuts:shortcutOn}},()=>{shortcutOn=previous;shortcut.classList.toggle('selected',previous);shortcut.setAttribute('aria-pressed',String(previous));});
   });
  }
- let wechatOn=!!recipient?.sources?.wechat;
- const wechat=el('button',`source-chip${wechatOn?' selected':''}`,t('微信','WeChat'));
- wechat.type='button';wechat.setAttribute('aria-pressed',String(wechatOn));
- wechat.addEventListener('click',()=>{
-  const previous=wechatOn;wechatOn=!previous;wechat.classList.toggle('selected',wechatOn);wechat.setAttribute('aria-pressed',String(wechatOn));
-  void applyConfig(bot.id,{sources:{wechat:wechatOn}},()=>{wechatOn=previous;wechat.classList.toggle('selected',previous);wechat.setAttribute('aria-pressed',String(previous));});
- });
  let whatsappOn=!!recipient?.sources?.whatsapp;
  const whatsapp=el('button',`source-chip${whatsappOn?' selected':''}`,t('WhatsApp','WhatsApp'));
  whatsapp.type='button';whatsapp.setAttribute('aria-pressed',String(whatsappOn));
@@ -423,7 +416,7 @@ function renderChat(content){
   const previous=whatsappOn;whatsappOn=!previous;whatsapp.classList.toggle('selected',whatsappOn);whatsapp.setAttribute('aria-pressed',String(whatsappOn));
   void applyConfig(bot.id,{sources:{whatsapp:whatsappOn}},()=>{whatsappOn=previous;whatsapp.classList.toggle('selected',previous);whatsapp.setAttribute('aria-pressed',String(previous));});
  });
- sources.append(general,...(shortcut?[shortcut]:[]),wechat,whatsapp);
+ sources.append(general,...(shortcut?[shortcut]:[]),whatsapp);
  // Windows has a single share entry for every receiving Bot, so the per-source
  // switches would promise a choice that does not exist there.
  if(state.host?.platform!=='win32')settingsBody.append(settingRow(t('来源','Sources'),sources));
@@ -587,8 +580,8 @@ function settingsTabBar(){
 }
 function sourceDefaultsPanel(){
  const panel=el('section','group');
- panel.append(settingRow(t('来源','Sources'),el('span'),t('每个来源可以指定默认 Bot 和一段前缀。分享时点哪个 Bot 就交给哪个；默认 Bot 会打开对应来源。WhatsApp 导出会带上来源标记 WhatsApp 和这里的前缀。','Each source can have a default Bot and a prefix. The Bot you tap in the share sheet still receives that share; the default Bot turns that source on. A WhatsApp export carries the WhatsApp tag and this prefix.')));
- for(const [source,label] of [['wechat',t('微信','WeChat')],['whatsapp','WhatsApp']]){
+ panel.append(settingRow(t('来源','Sources'),el('span'),t('WhatsApp 和通用来源可以各自指定默认 Bot 和一段前缀。分享时点哪个 Bot 就交给哪个；默认 Bot 会打开对应来源。WhatsApp 导出会带上来源标记 WhatsApp 和这里的前缀。其他分享走通用来源。','WhatsApp and the general source can each have a default Bot and a prefix. The Bot you tap in the share sheet still receives that share; the default Bot turns that source on. A WhatsApp export carries the WhatsApp tag and this prefix. Other shares use the general source.')));
+ for(const [source,label] of [['share',t('通用','General')],['whatsapp','WhatsApp']]){
   const current=state.sourceDefaults?.[source]??{botId:'',prefix:''};
   const picker=el('div','source-picker');
   const choose=(botId,prefix)=>{
@@ -677,13 +670,13 @@ function renderSettings(content){
  cliRow.append(cliCopy,cliSwitch);cliPanel.append(cliRow);
  if(settingsTab==='share'&&state.host?.platform==='darwin'){
   const menu=state.host.menu??{},wechatPanel=el('section','group'),row=el('div','group-row'),info=el('div');
-  info.append(el('div','group-label',t('分享菜单','Share menu')),el('div','group-help',!menu.available?t('这个版本没有分享扩展','Sharing extensions are not in this build'):menu.busy?t('正在同步菜单','Syncing the menu'):menu.needsUpdate?t('设置已保存，需要重新同步','Saved. Sync to update.'):t(`已启用 ${menu.registered??0} 个入口。微信和 WhatsApp 共用这 12 个槽。`,`${menu.registered??0} destinations on. WeChat and WhatsApp share these 12 slots.`)));
-  const update=smallButton(t('重新同步','Sync again'),async()=>{update.disabled=true;try{const result=await api.updateMenu();toast(t(`已同步 ${result.registered} 个入口。若微信里没变化，请完全退出微信再打开；微信会缓存旧的分享菜单。`,`Synced ${result.registered} destinations. If WeChat still shows the old menu, quit WeChat completely and reopen it; WeChat caches the sharing menu.`));}catch{}finally{update.disabled=false;}});
+  info.append(el('div','group-label',t('分享菜单','Share menu')),el('div','group-help',!menu.available?t('这个版本没有分享扩展','Sharing extensions are not in this build'):menu.busy?t('正在同步菜单','Syncing the menu'):menu.needsUpdate?t('设置已保存，需要重新同步','Saved. Sync to update.'):t(`已启用 ${menu.registered??0} 个入口。WhatsApp 和通用来源共用这 12 个槽。`,`${menu.registered??0} destinations on. WhatsApp and the general source share these 12 slots.`)));
+  const update=smallButton(t('重新同步','Sync again'),async()=>{update.disabled=true;try{const result=await api.updateMenu();toast(t(`已同步 ${result.registered} 个入口。若系统分享里没变化，请完全退出正在使用的应用再打开；系统会缓存旧的分享菜单。`,`Synced ${result.registered} destinations. If the share sheet still shows the old menu, quit that app completely and reopen it; the system caches the sharing menu.`));}catch{}finally{update.disabled=false;}});
   update.disabled=!menu.available||menu.busy||!!state.accountBusy;row.append(info,update);wechatPanel.append(row);
-  const read=smallButton(menuReading?t('正在读取','Reading'):t('读取微信顺序','Read WeChat order'),readMenuOrder);
+  const read=smallButton(menuReading?t('正在读取','Reading'):t('读取当前顺序','Read current order'),readMenuOrder);
   read.disabled=menuReading;
-  wechatPanel.append(settingRow(t('菜单顺序','Menu order'),read,t('读取微信里现在的顺序。排好以后，按这个顺序重新注册菜单。最多 12 个。','Read the current WeChat order. After you sort, the menu is registered in that order. Up to 12.')));
-  const menuBots=wechatBots();
+  wechatPanel.append(settingRow(t('菜单顺序','Menu order'),read,t('读取系统分享里现在的顺序。排好以后，按这个顺序重新注册菜单。最多 12 个。','Read the current share-sheet order. After you sort, the menu is registered in that order. Up to 12.')));
+  const menuBots=shareMenuBots();
   menuBots.forEach((bot,index)=>{
    const line=el('div','menu-order-row'),buttons=el('div','order-buttons');
    const up=el('button','icon-button');up.type='button';up.disabled=index===0;up.setAttribute('aria-label',t('前移','Earlier'));up.append(icon('up'));
@@ -714,7 +707,7 @@ function renderSettings(content){
   if(state.host?.platform==='win32'){
    const menuOn=state.host?.explorerMenu!==false;
    const windows=el('section','group');
-   const help=t('在资源管理器的文件右键菜单里显示已开启接收转发的 Bot。如果微信或其他程序的菜单显示异常，先点『全部移除』再重启微信，确认是不是它引起的。','Shows Bots that receive forwards in the Explorer file menu. If WeChat or another app\'s menu looks wrong, choose Remove all, restart WeChat, and see if that was the cause.');
+   const help=t('在资源管理器的文件右键菜单里显示已开启接收转发的 Bot。如果别的程序的菜单显示异常，先点『全部移除』再重启那个程序，确认是不是它引起的。','Shows Bots that receive forwards in the Explorer file menu. If another app\'s menu looks wrong, choose Remove all, restart that app, and see if that was the cause.');
    const toggle=el('input','switch');toggle.type='checkbox';toggle.checked=menuOn;toggle.setAttribute('aria-label',t('在资源管理器右键菜单显示','Show in the Explorer menu'));
    toggle.addEventListener('change',()=>{const next=toggle.checked;run(async()=>{try{await api.explorerMenu({action:'set',enabled:next});}catch(error){toggle.checked=!next;throw error;}});});
    windows.append(settingRow(t('Windows 右键菜单','Windows menu'),toggle,help));
@@ -905,12 +898,12 @@ function shortcutRow(slot,label,help){
  actions.append(cap,smallButton(t('清除','Clear'),()=>api.setShortcut(slot,'')));
  return settingRow(label,actions,help);
 }
-function wechatBots(){return orderedBots().filter(bot=>{const recipient=recipientOf(bot.id);return recipient?.enabled&&recipient.sources?.wechat;}).slice(0,12);}
+function shareMenuBots(){return orderedBots().filter(bot=>{const recipient=recipientOf(bot.id);return recipient?.enabled&&(recipient.sources?.share||recipient.sources?.whatsapp);}).slice(0,12);}
 async function applyBotOrder(ids){
  for(let position=0;position<ids.length;position++)if((recipientOf(ids[position])?.order??0)!==position)await api.configure(ids[position],{order:position});
 }
 async function moveMenu(id,delta){
- const ids=wechatBots().map(bot=>bot.id),index=ids.indexOf(id),next=index+delta;
+ const ids=shareMenuBots().map(bot=>bot.id),index=ids.indexOf(id),next=index+delta;
  if(index<0||next<0||next>=ids.length)return;
  const order=ids.slice();const [moved]=order.splice(index,1);order.splice(next,0,moved);
  await applyBotOrder(spliceWechatOrder(orderedBots().map(bot=>bot.id),ids,order));
@@ -920,8 +913,8 @@ async function readMenuOrder(){
  menuReading=true;render();
  try{
   const result=await api.menuOrder();
-  const message={wechat:t('已按微信里的顺序排好','Sorted to match WeChat.'),installed:t('已按当前安装的菜单排好','Sorted to match the installed menu.'),settings:t('没有读到微信菜单','Could not read the WeChat menu.')}[result?.source]??t('没有读到微信菜单','Could not read the WeChat menu.');
-  if(result?.source==='wechat'||result?.source==='installed')await applyBotOrder(spliceWechatOrder(orderedBots().map(bot=>bot.id),wechatBots().map(bot=>bot.id),result.ids??[]));
+  const message={system:t('已按系统分享里的顺序排好','Sorted to match the share sheet.'),installed:t('已按当前安装的菜单排好','Sorted to match the installed menu.'),settings:t('没有读到系统分享菜单','Could not read the share menu.')}[result?.source]??t('没有读到系统分享菜单','Could not read the share menu.');
+  if(result?.source==='system'||result?.source==='installed')await applyBotOrder(spliceWechatOrder(orderedBots().map(bot=>bot.id),shareMenuBots().map(bot=>bot.id),result.ids??[]));
   toast(message);
  }finally{menuReading=false;render();}
 }
@@ -1128,7 +1121,7 @@ async function disableAllShare(){
  const plans=toolboxShareOff(state.bots??[],state.recipients??[]);
  if(!plans.length)return;
  const count=plans.length;
- const confirmed=await askConfirm({title:t('关闭所有接收转发？','Turn off receive-forward for every Bot?'),body:t(`会关闭 ${count} 个 Bot 的接收转发，微信菜单和右键菜单里的入口随之消失。拖放来源也会随之关闭。可以在每个 Bot 里重新打开。`,`This turns off receive-forward for ${count} Bots. Entries in the WeChat menu and the right-click menu disappear. Drop sources turn off too. You can turn each Bot back on.`),confirmLabel:t('关闭','Turn off')});
+ const confirmed=await askConfirm({title:t('关闭所有接收转发？','Turn off receive-forward for every Bot?'),body:t(`会关闭 ${count} 个 Bot 的接收转发，分享菜单和右键菜单里的入口随之消失。拖放来源也会随之关闭。可以在每个 Bot 里重新打开。`,`This turns off receive-forward for ${count} Bots. Entries in the share menu and the right-click menu disappear. Drop sources turn off too. You can turn each Bot back on.`),confirmLabel:t('关闭','Turn off')});
  if(!confirmed)return;
  await run(async()=>{
   const result=await api.disableAllReceive();
@@ -1141,7 +1134,7 @@ async function copyBot(id){
  const bot=state.bots.find(item=>item.id===id);
  if(!confirmCopy({isRoom:isGroup(bot),confirmed:true}).duplicate)return;
  const trigger=document.activeElement instanceof HTMLElement?document.activeElement:null;
- const confirmed=await askConfirm({title:t('复制这个 Bot？','Copy this Bot?'),body:t('会新建一个 Bot。微信和通用来源都保持关闭。','This creates a new Bot. WeChat and the general sources stay off.'),confirmLabel:t('复制','Copy')});
+ const confirmed=await askConfirm({title:t('复制这个 Bot？','Copy this Bot?'),body:t('会新建一个 Bot。WhatsApp 和通用来源都保持关闭。','This creates a new Bot. WhatsApp and the general source stay off.'),confirmLabel:t('复制','Copy')});
  if(!confirmCopy({isRoom:isGroup(bot),confirmed}).duplicate)return;
  copyOpener=trigger;
  copying=true;paintOverlay();

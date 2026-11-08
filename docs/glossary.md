@@ -7,8 +7,8 @@
 | **Bot** | 用户账号下的一个 Grok 智能体，有名字、头像、长期对话。身份主键是 UUID（`agentId`/`id`），不是数字 id。 | `desktop/src/service/session.mjs` |
 | **主 Bot** | 账号设置里标记为主 Bot 的那一个，UI 显示星标；不改变投递语义。 | `runtime.mainAgentId` |
 | **接收单位 / recipient** | 某个 Bot 是否允许接收入口内容，以及收到后怎么处理。按 `(accountId, botId)` 存。 | `src/service/store.mjs` `recipients` |
-| **来源 / source** | `wechat`、`whatsapp`、`shortcuts`、`share`、`drop`，可分别开关。 | `store.mjs` `SOURCES` |
-| **来源默认** | 每个来源一个默认 Bot 和一段前缀。分享菜单里点哪个 Bot 仍交给哪个；默认 Bot 会打开对应来源。 | `source-defaults.mjs` |
+| **来源 / source** | 界面上是 WhatsApp 和通用（`share` + `drop`），另有 `shortcuts`。`wechat` 只留在分享扩展的 manifest 里，读出来时并进通用。 | `store.mjs` `SOURCES` |
+| **来源默认** | WhatsApp 和通用来源各自一个默认 Bot 和一段前缀。分享菜单里点哪个 Bot 仍交给哪个；默认 Bot 会打开对应来源。旧的微信默认会迁到通用，不覆盖已经写过的通用前缀。 | `source-defaults.mjs` |
 | **receipt / 收件** | 一条交办记录：来源、文字、文件、目标 Bot、当时的投递模式、状态。 | `delivery.mjs` |
 | **compose 模式** | 收到后先放进悬浮输入框，用户补字再发。默认模式。 | `recipient.mode` |
 | **direct 模式** | 收到后直接上传并发送；可加固定前缀。 | `recipient.mode` |

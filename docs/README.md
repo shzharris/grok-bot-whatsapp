@@ -29,7 +29,7 @@ desktop/                 Electron 应用（macOS / Windows 主产品）
   src/renderer/          主窗口、悬浮输入框、Tab 宫格、头像页
   src/share/             macOS 分享菜单模型、槽位、注册、顺序
   src/shell/             跨平台纯函数：窗口选项、托盘模型、深链、Explorer 转发
-  test/                  183 个 Node 测试
+  test/                  185 个 Node 测试
 native/macos/            Swift 原生伴侣（Touch Bar、原生输入框、语音、分享扩展宿主）
   Sources/               Swift Package 源码
   avatar/                Bloub 离线头像渲染源码
@@ -76,7 +76,7 @@ npm run docs:check
 最短路径：
 
 ```sh
-npm run test:desktop           # 183 tests
+npm run test:desktop           # 185 tests
 cd native/macos && swift build  # macOS only
 cd packages/client-protocol && npm test
 node --test native/macos/avatar/renderer.test.mjs

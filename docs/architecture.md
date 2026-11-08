@@ -31,7 +31,7 @@ Electron main (desktop/src/main/main.mjs)
 
 | 入口 | 路径 | 第一落点 |
 | --- | --- | --- |
-| 微信 / WhatsApp 分享（macOS） | 同一个分享扩展把 ZIP、`_chat.txt`、文本或媒体复制到 `ShareInbox/Ready/<id>/` | 服务进程 `ShareInbox.drain()`；WhatsApp 导出在这里识别 |
+| 系统分享 / WhatsApp（macOS） | 同一个分享扩展把 ZIP、`_chat.txt`、文本或媒体复制到 `ShareInbox/Ready/<id>/` | 服务进程 `ShareInbox.drain()`；WhatsApp 导出在这里识别，其余记为通用来源 |
 | 快捷指令 / URL | `grokbotanywhere://compose|send` | 主进程深链解析 → 服务 `receive` |
 | Explorer 右键（Windows） | `--explorer-forward --bot=<id> -- <file>` | 主进程 `parseExplorerForward` → 服务 `receive` |
 | 悬浮输入框 | 全局快捷键 / 托盘 / `composer.open` | 主进程 `openComposer` → 用户确认后 `sendDraft` |

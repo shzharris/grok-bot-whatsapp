@@ -277,7 +277,7 @@ async function confirmShare(botId){
   const recipient=(latestState.recipients??[]).find(row=>row.botId===botId);
   const mode=recipient?.mode==='direct'?'direct':'compose';
   try{
-    const receipt=await rpc.call('receive',{botId,source:'wechat',text,files,manual:mode!=='direct'},RECEIVE_TIMEOUT);
+    const receipt=await rpc.call('receive',{botId,source:'share',text,files,manual:mode!=='direct'},RECEIVE_TIMEOUT);
     if(mode==='direct'){
       // receive() already sends direct receipts when the account is connected.
       // Submit only when it could not start (offline/transition), or the same
@@ -532,7 +532,7 @@ async function readShareOrder(){
     try{
       const {stdout}=await runProcess('swift',[join(here,'../../scripts/probe-share.swift')],{timeout:25000,maxBuffer:1024*1024});
       const ids=matchShareTitles(stdout.split('\n'),menuEntries(latestState));
-      if(ids.length)return {ids,source:'wechat'};
+      if(ids.length)return {ids,source:'system'};
     }catch{}
     const known=new Set((latestState.bots??[]).map(bot=>bot.id));
     const ids=(shareMenu?.installed?.entries??[]).filter(entry=>entry.slot>=1&&entry.slot<=12&&known.has(entry.botId)).sort((a,b)=>a.slot-b.slot).map(entry=>entry.botId);
@@ -599,7 +599,7 @@ async function openComposer(botId,receipt,options={}){
   const card=ready?.card??{width:368,height:110};
   placeFloat(card.width,card.height);
   notify('composer-show',{});
-  // WeChat/share handoffs can open the composer while another app is frontmost.
+  // Share handoffs can open the composer while another app is frontmost.
   // showInactive avoids the Dock flash, so explicitly activate the accessory app
   // and refocus the text field after the card has rendered.
   if(process.platform==='darwin'){try{app.focus({steal:true});}catch{}}

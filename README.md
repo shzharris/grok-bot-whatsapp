@@ -6,7 +6,7 @@
 
 <p><strong>把 WhatsApp 里导出的聊天，交给自己的 Grok Bot。</strong></p>
 
-<p>WhatsApp 导出 · 微信转发 · Finder / 资源管理器 · 拖放 · 全局悬浮输入框</p>
+<p>WhatsApp 导出 · 系统分享 · Finder / 资源管理器 · 拖放 · 全局悬浮输入框</p>
 
 <p>基于 <a href="https://github.com/RongleCat/grok-bot-anywhere">RongleCat/grok-bot-anywhere</a>（MIT）二次开发。</p>
 
@@ -41,12 +41,12 @@
 
 ## 它解决什么问题
 
-聊天记录常常停在 WhatsApp 里：一次导出、一个 `_chat.txt`，或一个带着图片的 zip。Grok Bot Anywhere 的这支分叉把这些导出接到你指定的 Bot 上，并留下一条本地收件记录。微信转发、拖放和悬浮输入框仍然可用。它不是另一个聊天客户端，只做投递入口和收件箱。
+聊天记录常常停在 WhatsApp 里：一次导出、一个 `_chat.txt`，或一个带着图片的 zip。这个应用把这些导出接到你指定的 Bot 上，并留下一条本地收件记录。系统分享、拖放和悬浮输入框也可以把内容送进来。它不是另一个聊天客户端，只做投递入口和收件箱。
 
 ## 适合谁
 
 - 已经在用 Grok Bot，希望把 WhatsApp 导出的聊天交给它整理。
-- 有多个 Bot 分工，想让微信和 WhatsApp 各自使用默认 Bot 和一段前缀。
+- 有多个 Bot 分工，想让 WhatsApp 和通用来源各自使用默认 Bot 和一段前缀。
 - 在意投递结果，不接受「结果不明就自动重发」。
 - 使用 macOS，或愿意在 Windows 上帮忙实机验证。
 
@@ -65,15 +65,15 @@
    - 包含媒体时，得到一个 zip：里面是 `_chat.txt` 和图片、视频等文件。
    - iPhone 导出的文件用隔空投送、文件 App 或数据线带到 Mac。
 2. 打开本应用，连接 Grok Bot 账号。
-3. 在 **设置 → 常规 → 来源** 里，为 WhatsApp 选默认 Bot，并写一段前缀，例如 `整理要点、痛点和可做的选题`。微信可以另选一个 Bot、另写一段前缀。
+3. 在 **设置 → 常规 → 来源** 里，为 WhatsApp 选默认 Bot，并写一段前缀，例如 `整理要点、痛点和可做的选题`。通用来源可以另选一个 Bot、另写一段前缀。
 4. 把导出文件交给应用，任选一种：
-   - macOS：在 WhatsApp 或访达的系统分享里点 `发给 {Bot 名}`。这和微信共用同一套 12 个分享槽。
+   - macOS：在 WhatsApp 或访达的系统分享里点 `发给 {Bot 名}`。WhatsApp 和通用来源共用这 12 个槽。
    - 把 `_chat.txt` 或 zip 拖到对应的 Bot 卡片上。
-5. 应用识别导出格式后，收件会带上来源标记 `WhatsApp`、聊天名、参与者和时间范围，并把该来源的前缀放在正文前面。媒体会随 zip 一起附上；能展开的图片和文件会另外挂上。
+5. 应用识别导出格式后，收件会带上来源标记 `WhatsApp`、聊天名、参与者和时间范围，并把该来源的前缀放在正文前面。媒体会随 zip 一起附上；能展开的图片和文件会另外挂上。不是 WhatsApp 导出的分享走通用来源。
 
 支持的导出形态包括：iOS 方括号样式和 Android 横线样式、12 小时制和 24 小时制、中文和英文系统行、从左到右标记和窄不换行空格、多行消息，以及 `<attached: …>`、`(file attached)`、`图像已省略` 这类附件占位。
 
-微信「合并转发 → 其他应用」仍走同一套分享扩展。设置里可以分别指定微信和 WhatsApp 的默认 Bot 与前缀。
+设置里可以分别指定 WhatsApp 和通用来源的默认 Bot 与前缀。
 
 真实的 WhatsApp Mac 分享菜单和 iPhone 导出传到 Mac 的整条路径还没有在实机上跑过。单测覆盖的是导出文件的识别、解析和导入。
 
@@ -86,7 +86,7 @@ git clone --recurse-submodules <repo-url>
 cd <repo>
 npm run setup
 npm run build:native     # Touch Bar、原生输入框、语音
-npm run build:share      # 分享菜单（微信和 WhatsApp 共用）
+npm run build:share      # 系统分享菜单（WhatsApp 和通用来源共用）
 npm run dev
 ```
 
@@ -94,7 +94,7 @@ npm run dev
 
 1. 连接 Grok Bot 账号。
 2. 选择一个 Bot，打开「接收转发」。
-3. 在设置里为 WhatsApp（以及微信，如果还要用）指定默认 Bot 和前缀。
+3. 在设置里为 WhatsApp 和通用来源指定默认 Bot 和前缀。
 4. 按 `Control+Option+Space` 唤起悬浮输入框。
 5. 导出一份 WhatsApp 聊天，分享或拖进应用。
 
@@ -128,7 +128,7 @@ macOS 上还可以用设备端中文语音输入；拖入文件时只登记路�
 
 ### 分享菜单（macOS）
 
-macOS 的分享扩展是通用的系统分享（`com.apple.share-services`）。微信「转发 → 其他应用」和 WhatsApp 的系统分享里，每个启用的接收 Bot 占一行。点哪一行就投给哪个 Bot。
+macOS 的分享扩展是通用的系统分享（`com.apple.share-services`）。WhatsApp 和访达的系统分享里，每个启用的接收 Bot 占一行。点哪一行就投给哪个 Bot。
 
 分享扩展不能在运行时创建，所以预留 12 个签名槽位：第 1–12 个接收 Bot 进入菜单，第 13 个起仍可用悬浮输入框和拖放。
 
@@ -148,9 +148,9 @@ Windows 只有一个 `Grok Bot` 条目，点开后由应用内的 Bot 选择面�
 ### 每个来源、每个 Bot 的投递策略
 
 - 收到后**直接发送**，或先放进输入框等你补充。
-- 设置里，微信和 WhatsApp 可以各自指定默认 Bot 和一段前缀。这段前缀会加在该来源的正文前，例如 `整理要点、痛点和可做的选题`。
+- 设置里，WhatsApp 和通用来源可以各自指定默认 Bot 和一段前缀。这段前缀会加在该来源的正文前，例如 `整理要点、痛点和可做的选题`。
 - 直接发送时，Bot 自己的前缀仍会包在整段正文外面。
-- 微信、WhatsApp、系统分享、拖放可以分别开关。
+- WhatsApp 和通用来源可以分别开关。通用来源包含拖放和系统分享。
 - 关掉某个 Bot 只停止新内容进入，不删除已有记录。
 
 ### 头像
@@ -167,7 +167,7 @@ Bot 的「更多」菜单里打开头像编辑器：26 个形状 × 11 个颜色
 
 ```mermaid
 flowchart LR
-  W[WhatsApp 导出 / 微信转发] --> I[本地收件箱]
+  W[WhatsApp 导出 / 系统分享] --> I[本地收件箱]
   S[快捷键 / 深链 / 右键 / 拖放] --> I
   I --> P{该 Bot 的投递策略}
   P -->|直接发送| U[上传附件]
@@ -189,7 +189,7 @@ flowchart LR
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
 | macOS 14+ | 主路径已实机验证 | 登录、名单、悬浮输入框、12 槽分享菜单、收件与发送、签名公证 DMG。WhatsApp 解析有单测；真实分享菜单未运行 |
-| Windows 10/11 | 部分实机验证（开发模式） | 启动、主窗口、URL 协议、Explorer 级联、CLI、微信分享入口 + Bot 选择面板已在真机跑过；安装包、右键点击，以及 WhatsApp 文件拖入未运行 |
+| Windows 10/11 | 部分实机验证（开发模式） | 启动、主窗口、URL 协议、Explorer 级联、CLI、系统分享入口 + Bot 选择面板已在真机跑过；安装包、右键点击，以及 WhatsApp 文件拖入未运行 |
 | Linux | 未支持 | 没有打包目标与平台适配 |
 
 「已实现」只表示代码和单测存在。没跑过的项不写成已验证。细节见 [macOS](docs/platforms/macos.md)、[Windows](docs/platforms/windows.md) 与 [Linux](docs/platforms/linux.md)。
@@ -252,7 +252,7 @@ Windows 分发首选 Microsoft Store：个人开发者账号免费，商店认�
 - 收件库、附件副本和偏好保存在本机 `userData`；应用登录使用 Electron `safeStorage`，没有明文回退。
 - 只有主动打开命令行开关时，才会为 `grok-bot` 另外保存一份明文登录；退出登录或关闭开关时删除。
 - 分享扩展没有网络权限，只把内容写到本地 `ShareInbox`；服务进程校验后才导入。
-- 不读取 WhatsApp 或微信的本地数据库，不向这些进程注入代码，也不使用非官方登录库。只处理你主动导出或分享的文件。
+- 不读取 WhatsApp 的本地数据库，不向其他应用注入代码，也不使用非官方登录库。只处理你主动导出或分享的文件。
 - 日志和验收报告不记录 token、cookie、聊天正文或私有 Bot ID。
 - 测试使用临时目录和注入的 transport，不读写真实账号、Keychain 或用户数据。
 
@@ -265,7 +265,7 @@ macOS 主路径可用。还没完成的部分：
 - [ ] WhatsApp for Mac 的真实分享菜单，以及 iPhone 导出文件在 Mac 上的整条分享路径。
 - [ ] Windows 实机验证（剩余）：安装包首次启动、Explorer 右键点击、悬浮输入框焦点、托盘点击，以及 WhatsApp 导出文件拖入。已跑过的项见 [Windows](docs/platforms/windows.md)。
 - [ ] Linux 桌面支持：先决定系统集成最低集，再补打包目标。
-- [ ] 更多真实微信版本、Touch Bar 硬件和语音权限的回归。
+- [ ] Touch Bar 硬件和语音权限的回归。
 
 未完成项不会在功能列表里写成「已支持」。
 

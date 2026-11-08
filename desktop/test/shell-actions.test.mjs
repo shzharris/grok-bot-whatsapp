@@ -385,7 +385,7 @@ test('shipped main and renderer call the confirm, tray, login, and explorer deci
   assert.match(main,/explorerBatch\.arm\([\s\S]*rpc\.call\('connect'/);
   assert.match(main,/case 'explorerMenu'/);
   assert.match(renderer,/Windows 右键菜单/);
-  assert.match(renderer,/如果微信或其他程序的菜单显示异常，先点『全部移除』再重启微信，确认是不是它引起的。/);
+  assert.match(renderer,/如果别的程序的菜单显示异常，先点『全部移除』再重启那个程序，确认是不是它引起的。/);
   assert.match(renderer,/platform==='win32'/);
   assert.match(renderer,/explorerMenu\(\{action:'rebuild'\}/);
   assert.match(renderer,/explorerMenu\(\{action:'remove'\}/);

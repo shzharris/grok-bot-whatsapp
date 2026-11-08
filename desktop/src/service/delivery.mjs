@@ -20,7 +20,7 @@ export class Delivery {
     if(sourceTag!==undefined&&sourceTag!=='WhatsApp')throw new Error('RECEIPT_INVALID');
     const recipient=this.store.recipient(accountId,bot.id);
     // A share slot is chosen before the file is classified. WhatsApp exports that
-    // arrive through the WeChat/share menu stay allowed when that original source is on.
+    // arrive through the generic share sheet stay allowed when that source is on.
     const originAllowed=!!originSource&&recipient.sources[originSource]===true;
     if(!manual&&(!recipient.enabled||!(recipient.sources[source]||originAllowed)))throw new Error('SOURCE_DISABLED');
     if(fileNames&&(!Array.isArray(fileNames)||fileNames.length!==files.length||fileNames.some(n=>typeof n!=='string'||!n||/[\\/]/.test(n))))throw new Error('ATTACHMENT_INVALID');

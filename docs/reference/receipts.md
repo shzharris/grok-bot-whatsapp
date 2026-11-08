@@ -8,7 +8,7 @@
 | --- | --- |
 | `id` | receipt UUID |
 | `accountId` / `botId` / `botName` / `sessionId` | 冻结的投递目标 |
-| `source` | `wechat` / `whatsapp` / `shortcuts` / `share` / `drop` |
+| `source` | `whatsapp` / `shortcuts` / `share` / `drop`。分享扩展的 manifest 仍写 `wechat`，导入时并进 `share`，除非识别为 WhatsApp |
 | `sourceTag` | 识别为 WhatsApp 导出时为 `WhatsApp`；其它来源没有这个字段 |
 | `text` / `title` | 正文与可识别标题（微信 ZIP 等） |
 | `files[{path,name,bytes}]` | 本地副本；`path` 不离开服务进程 |

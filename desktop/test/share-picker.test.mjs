@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {pickerBots,pickerClick,pickerKey} from '../src/share/picker.mjs';
 
 const bot=id=>({id,name:id});
-const recipient=(botId,over={})=>({botId,enabled:true,mode:'compose',prefix:'',sources:{wechat:true,drop:false},order:0,...over});
+const recipient=(botId,over={})=>({botId,enabled:true,mode:'compose',prefix:'',sources:{share:true,drop:false},order:0,...over});
 const state=(over={})=>({account:{id:'acct'},accountBusy:false,bots:[bot('a'),bot('b'),bot('c')],recipients:[recipient('a'),recipient('b'),recipient('c')],...over});
 
-test('the picker lists only Bots whose WeChat source is on',()=>{
-  const rows=pickerBots(state({recipients:[recipient('a'),recipient('b',{sources:{wechat:false}}),recipient('c',{enabled:false,sources:{wechat:true}})]}));
+test('the picker lists only Bots whose general source is on',()=>{
+  const rows=pickerBots(state({recipients:[recipient('a'),recipient('b',{sources:{share:false}}),recipient('c',{enabled:false,sources:{share:true}})]}));
   assert.deepEqual(rows.map(row=>row.botId),['a']);
   assert.equal(rows[0].mode,'compose');
   assert.equal(rows[0].name,'a');
@@ -25,12 +25,12 @@ test('the picker follows the configured order and drops unknown Bots',()=>{
 });
 
 test('a WhatsApp-only Bot is listed in the share picker',()=>{
-  const rows=pickerBots(state({recipients:[recipient('a',{sources:{wechat:false,whatsapp:true}}),recipient('b',{sources:{wechat:false}})]}));
+  const rows=pickerBots(state({recipients:[recipient('a',{sources:{share:false,whatsapp:true}}),recipient('b',{sources:{share:false}})]}));
   assert.deepEqual(rows.map(row=>row.botId),['a']);
 });
 
 test('Windows lists every receiving Bot because it has no per-source choice',()=>{
-  const recipients=[recipient('a',{sources:{wechat:false,drop:false}}),recipient('b',{sources:{wechat:true}}),recipient('c',{enabled:false,sources:{wechat:true}})];
+  const recipients=[recipient('a',{sources:{share:false,drop:false}}),recipient('b',{sources:{share:true}}),recipient('c',{enabled:false,sources:{share:true}})];
   assert.deepEqual(pickerBots(state({recipients})).map(row=>row.botId),['b']);
   assert.deepEqual(pickerBots(state({recipients}),{allSources:true}).map(row=>row.botId),['a','b']);
 });

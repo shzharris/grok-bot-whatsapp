@@ -67,7 +67,7 @@
       "id": "subsystems-share-menu",
       "title": "分享菜单",
       "path": "docs/subsystems/share-menu.md",
-      "summary": "macOS 12 槽分享（微信和 WhatsApp 共用）、独立宿主 App、注册与更新；Windows 差异。",
+      "summary": "macOS 12 槽系统分享（WhatsApp 和通用来源共用）、独立宿主 App、注册与更新；Windows 差异。",
       "tags": [
         "macos",
         "share",

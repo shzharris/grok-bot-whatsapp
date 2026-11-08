@@ -25,7 +25,11 @@ export class InboxStore {
     const row=this.db.prepare('SELECT value FROM recipients WHERE account=? AND bot=?').get(accountId,botId);
     if(!row)return base;
     const saved=JSON.parse(row.value);
-    return {...base,...saved,sources:{...base.sources,...(saved.sources??{})}};
+    const sources={...base.sources,...(saved.sources??{})};
+    // The share extension used to be stored as a WeChat source. The UI no longer
+    // has that switch, so a Bot that was on for it keeps receiving as 通用.
+    if(sources.wechat===true){sources.share=true;sources.wechat=false;}
+    return {...base,...saved,sources};
   }
   saveRecipient(accountId,botId,patch) {
     if(typeof accountId!=='string'||!accountId||typeof botId!=='string'||!botId||!patch||typeof patch!=='object') throw new Error('RECIPIENT_INVALID');

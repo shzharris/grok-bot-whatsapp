@@ -1,13 +1,26 @@
-export const SOURCE_DEFAULT_KEYS = ['wechat', 'whatsapp'];
+export const SOURCE_DEFAULT_KEYS = ['share', 'whatsapp'];
+
+// Choosing the generic default turns on both halves of 通用: system share and drop.
+export const SOURCE_DEFAULT_FLAGS = {share: ['share', 'drop'], whatsapp: ['whatsapp']};
 
 export function emptySourceDefaults() {
-  return {wechat: {botId: '', prefix: ''}, whatsapp: {botId: '', prefix: ''}};
+  return {share: {botId: '', prefix: ''}, whatsapp: {botId: '', prefix: ''}};
+}
+
+function blankSlot(slot) {
+  return !slot || typeof slot !== 'object' || (!slot.botId && !slot.prefix);
 }
 
 // A stored value is coerced. A user write passes knownIds and rejects an unknown Bot.
+// Older installs stored a WeChat slot. That slot becomes the generic source when
+// the generic slot was never written, and the WeChat key is not returned.
 export function normalizeSourceDefaults(value, base = emptySourceDefaults(), knownIds = null) {
   const next = emptySourceDefaults();
-  const source = value && typeof value === 'object' ? value : {};
+  const raw = value && typeof value === 'object' ? value : {};
+  const source = {...raw};
+  if (!Object.hasOwn(source, 'share') && source.wechat && typeof source.wechat === 'object' && blankSlot(source.share)) {
+    source.share = source.wechat;
+  }
   const previous = base && typeof base === 'object' ? base : emptySourceDefaults();
   for (const key of SOURCE_DEFAULT_KEYS) {
     const patch = source[key] && typeof source[key] === 'object' ? source[key] : {};

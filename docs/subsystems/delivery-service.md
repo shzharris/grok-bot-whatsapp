@@ -62,7 +62,7 @@ preferences(key, value JSON, PRIMARY KEY(key))
 - 文件权限 `0600`，目录 `0700`；WAL + `synchronous=FULL`。
 - 启动时修复中断状态：`phase=sending` → `unconfirmed/held`；`phase=uploading` → `failed/ready`。
 - receipt 里的附件复制到 `inbox/files/<receiptId>/`，数据库只存路径/名称/字节数。
-- `sourceDefaults:<accountId>` 存在 preferences 里：`{wechat:{botId,prefix}, whatsapp:{botId,prefix}}`。前缀属于来源，写进正文；Bot 自己的 direct 前缀仍包在外面。
+- `sourceDefaults:<accountId>` 存在 preferences 里：`{share:{botId,prefix}, whatsapp:{botId,prefix}}`。前缀属于来源，写进正文；Bot 自己的 direct 前缀仍包在外面。旧数据里的 `wechat` 槽在读取时并进 `share`，已经写过的 `share` 不会被盖掉。指定通用默认 Bot 时同时打开 `share` 和 `drop`。
 
 ## 投递状态机
 
@@ -101,7 +101,7 @@ receive
 `share-inbox.mjs` 每 0.25 秒扫描 `ShareInbox/Preparing` 和 `ShareInbox/Ready`：
 
 1. 目录名只允许 `[A-Za-z0-9_-]{1,100}`，拒绝符号链接。
-2. `manifest.json` 必须版本 1、`source` 为 `wechat` 或 `whatsapp`、账号/投递模式/文件列表合法，大小 ≤8MB。WhatsApp 导出（`_chat.txt` 或含它的 zip）在导入时改记为 `whatsapp`，正文带上 `WhatsApp` 标记和该来源的前缀；原来的菜单来源仍算已开启，所以只打开了微信来源的槽也能收下这份导出。
+2. `manifest.json` 必须版本 1、`source` 为 `wechat` 或 `whatsapp`、账号/投递模式/文件列表合法，大小 ≤8MB。扩展写入的 `wechat` 表示系统分享。WhatsApp 导出（`_chat.txt` 或含它的 zip）在导入时改记为 `whatsapp`，正文带上 `WhatsApp` 标记和该来源的前缀；其他文件改记为通用来源 `share`，并带上通用前缀。只打开了通用来源的 Bot 也能收下随后识别出的 WhatsApp 导出。
 3. 账号不匹配或切换中：留在 `Ready`，不导入。
 4. 已存在同 `sourceId`：移到 `Imported`，不重复。
 5. 成功：`session.receive(...)` → 移到 `Imported`；配置类错误保留；其他失败写 `failure.txt` 后移到 `Rejected`。

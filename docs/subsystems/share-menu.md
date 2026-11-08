@@ -4,7 +4,7 @@
 
 ## 目标
 
-微信「转发 → 其他应用」里每个接收 Bot 一行，文案 `发给 {Bot 名}`，图标是该 Bot 的头像；点这一行直接投给绑定 Bot，不再选一次。WhatsApp 的系统分享用同一批槽位。打开了微信或 WhatsApp 来源的 Bot 都会占槽。
+系统分享里每个接收 Bot 一行，文案 `发给 {Bot 名}`，图标是该 Bot 的头像；点这一行直接投给绑定 Bot，不再选一次。打开了通用来源或 WhatsApp 的 Bot 都会占槽，WhatsApp 和访达看到的是同一批槽。
 
 ## 为什么是 12 个固定槽
 
@@ -65,7 +65,7 @@ ShareInbox/
 
 manifest v1 字段：`version,id,source=wechat|whatsapp,accountId,botId,mode,prefix,text,title,createdAt,files[{relativePath,name}]`。扩展写入的 `source` 仍是 `wechat`（它不知道对面是哪个 App）。服务进程校验后才导入；账号不匹配的批次留在 Ready，不跨账号投递。
 
-扩展点是通用的 `com.apple.share-services`，所以同一个槽会出现在微信和 WhatsApp 的系统分享里。导入时如果文件是 WhatsApp 导出（`_chat.txt`，或 zip 里有 `_chat.txt`，带不带媒体都可以），收件改记为 `source=whatsapp`，正文带上来源标记 `WhatsApp`、聊天名、参与者和时间范围，并附上该来源在设置里配置的前缀。解析在 `desktop/src/service/whatsapp-export.mjs`。不读 WhatsApp 本机数据库，只处理用户主动分享或导出的文件。真实 WhatsApp / iPhone 分享菜单未实机验证。
+扩展点是通用的 `com.apple.share-services`，所以同一个槽会出现在 WhatsApp、访达和其他会调用系统分享的应用里。导入时如果文件是 WhatsApp 导出（`_chat.txt`，或 zip 里有 `_chat.txt`，带不带媒体都可以），收件改记为 `source=whatsapp`，正文带上来源标记 `WhatsApp`、聊天名、参与者和时间范围，并附上该来源在设置里配置的前缀。其他文件改记为通用来源 `share`。解析在 `desktop/src/service/whatsapp-export.mjs`。不读 WhatsApp 本机数据库，只处理用户主动分享或导出的文件。真实 WhatsApp / iPhone 分享菜单未实机验证。
 
 扩展先处理 `file-url`；其余内容优先试 provider 声明的具体 UTType，再试 ZIP/影片/图片，最后用 `public.data` 兜底；只有当 provider 没有文件表示时才把纯文本当正文。这样 Word 等文档和不同微信版本提供的聊天记录不会只因为不在旧白名单里被丢掉；临时文件没有扩展名时从 UTType 补回（例如 `.docx`）。
 

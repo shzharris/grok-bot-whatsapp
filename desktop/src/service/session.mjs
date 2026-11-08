@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import * as sdk from 'grok-bot-sdk';
 import {COLORS,SHAPES} from 'grok-bot-avatar-engine';
 import {Delivery} from './delivery.mjs';
-import {emptySourceDefaults,normalizeSourceDefaults,SOURCE_DEFAULT_KEYS} from './source-defaults.mjs';
+import {emptySourceDefaults,normalizeSourceDefaults,SOURCE_DEFAULT_FLAGS,SOURCE_DEFAULT_KEYS} from './source-defaults.mjs';
 import {inspectWhatsAppIntake,prependInstruction} from './whatsapp-export.mjs';
 import {readSidebarSettings} from './runtime-settings.mjs';
 import {normalizeAccelerator,normalizeShortcutMap} from '../shortcuts.mjs';
@@ -122,8 +122,9 @@ export class AccountSession {
     for(const source of SOURCE_DEFAULT_KEYS){
       const botId=next[source].botId;
       if(!botId)continue;
+      const flags=SOURCE_DEFAULT_FLAGS[source];
       const recipient=this.store.recipient(accountId,botId);
-      if(!recipient.enabled||recipient.sources[source]!==true)this.store.saveRecipient(accountId,botId,{enabled:true,sources:{[source]:true}});
+      if(!recipient.enabled||flags.some(flag=>recipient.sources[flag]!==true))this.store.saveRecipient(accountId,botId,{enabled:true,sources:Object.fromEntries(flags.map(flag=>[flag,true]))});
     }
     this.emit();
     return this.snapshot();
@@ -187,12 +188,13 @@ export class AccountSession {
     const extractDir=await mkdtemp(join(this.store.root,'wa-'));
     try{
       const inspected=await inspectWhatsAppIntake({files:input.files??[],fileNames:input.fileNames,text:input.text??'',title:input.title??'',prefix:defaults.whatsapp?.prefix??'',extractDir});
+      const source=input.source==='wechat'?'share':input.source;
       if(!inspected){
         await rm(extractDir,{recursive:true,force:true});
-        const text=input.source==='wechat'?prependInstruction(input.text??'',defaults.wechat?.prefix??''):input.text;
-        return {input:{...input,text}};
+        const text=source==='share'?prependInstruction(input.text??'',defaults.share?.prefix??''):input.text;
+        return {input:{...input,source,text}};
       }
-      return {extractDir,input:{...input,source:'whatsapp',originSource:input.originSource??input.source,sourceTag:'WhatsApp',text:inspected.text,title:inspected.chatName||input.title||'',files:inspected.files,fileNames:inspected.fileNames}};
+      return {extractDir,input:{...input,source:'whatsapp',originSource:input.originSource??source,sourceTag:'WhatsApp',text:inspected.text,title:inspected.chatName||input.title||'',files:inspected.files,fileNames:inspected.fileNames}};
     }catch(error){
       await rm(extractDir,{recursive:true,force:true});
       throw error;
